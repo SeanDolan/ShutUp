@@ -114,61 +114,63 @@ Sources used for this first pin reference:
 
 ### Cab Pinout - LilyGO T-Display S3
 
+Cab pin names below are positional references, not silkscreen labels. `3V-side` is the header side that starts with `3V`; `GND-side` is the header side that starts with `GND`.
+
 | Pin | Label | GPIO | 3V3 | 5V | GND | ADC | TCH | STR | SPI | UART | CLK |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| P2-1 | 3V | - | ✓ |  |  |  |  |  |  |  |  |
-| P2-2 | 1 | GPIO1 |  |  |  | ✓ | ✓ |  |  |  |  |
-| P2-3 | 2 | GPIO2 |  |  |  | ✓ | ✓ |  |  |  |  |
-| P2-4 | 3 | GPIO3 |  |  |  | ✓ | ✓ | ✓ |  |  |  |
-| P2-5 | 10 | GPIO10 |  |  |  | ✓ | ✓ |  | ✓ |  |  |
-| P2-6 | 11 | GPIO11 |  |  |  | ✓ | ✓ |  | ✓ |  |  |
-| P2-7 | 12 | GPIO12 |  |  |  | ✓ | ✓ |  | ✓ |  |  |
-| P2-8 | 13 | GPIO13 |  |  |  | ✓ | ✓ |  | ✓ |  |  |
-| P2-9 | NC | - |  |  |  |  |  |  |  |  |  |
-| P2-10 | NC | - |  |  |  |  |  |  |  |  |  |
-| P2-11 | GND | - |  |  | ✓ |  |  |  |  |  |  |
-| P2-12 | +5V | - |  | ✓ |  |  |  |  |  |  |  |
-| P1-1 | GND | - |  |  | ✓ |  |  |  |  |  |  |
-| P1-2 | GND | - |  |  | ✓ |  |  |  |  |  |  |
-| P1-3 | 43 | GPIO43 |  |  |  |  |  |  |  | ✓ | ✓ |
-| P1-4 | 44 | GPIO44 |  |  |  |  |  |  |  | ✓ | ✓ |
-| P1-5 | 18 | GPIO18 |  |  |  | ✓ |  |  |  | ✓ |  |
-| P1-6 | 17 | GPIO17 |  |  |  | ✓ |  |  |  | ✓ |  |
-| P1-7 | 21 | GPIO21 |  |  |  |  |  |  |  |  |  |
-| P1-8 | 16 | GPIO16 |  |  |  | ✓ |  |  |  |  |  |
-| P1-9 | NC | - |  |  |  |  |  |  |  |  |  |
-| P1-10 | GND | - |  |  | ✓ |  |  |  |  |  |  |
-| P1-11 | GND | - |  |  | ✓ |  |  |  |  |  |  |
-| P1-12 | 3V | - | ✓ |  |  |  |  |  |  |  |  |
+| 3V-side 1 | 3V | - | ✓ |  |  |  |  |  |  |  |  |
+| 3V-side 2 | 1 | GPIO1 |  |  |  | ✓ | ✓ |  |  |  |  |
+| 3V-side 3 | 2 | GPIO2 |  |  |  | ✓ | ✓ |  |  |  |  |
+| 3V-side 4 | 3 | GPIO3 |  |  |  | ✓ | ✓ | ✓ |  |  |  |
+| 3V-side 5 | 10 | GPIO10 |  |  |  | ✓ | ✓ |  | ✓ |  |  |
+| 3V-side 6 | 11 | GPIO11 |  |  |  | ✓ | ✓ |  | ✓ |  |  |
+| 3V-side 7 | 12 | GPIO12 |  |  |  | ✓ | ✓ |  | ✓ |  |  |
+| 3V-side 8 | 13 | GPIO13 |  |  |  | ✓ | ✓ |  | ✓ |  |  |
+| 3V-side 9 | NC | - |  |  |  |  |  |  |  |  |  |
+| 3V-side 10 | NC | - |  |  |  |  |  |  |  |  |  |
+| 3V-side 11 | GND | - |  |  | ✓ |  |  |  |  |  |  |
+| 3V-side 12 | +5V | - |  | ✓ |  |  |  |  |  |  |  |
+| GND-side 1 | GND | - |  |  | ✓ |  |  |  |  |  |  |
+| GND-side 2 | GND | - |  |  | ✓ |  |  |  |  |  |  |
+| GND-side 3 | 43 | GPIO43 |  |  |  |  |  |  |  | ✓ | ✓ |
+| GND-side 4 | 44 | GPIO44 |  |  |  |  |  |  |  | ✓ | ✓ |
+| GND-side 5 | 18 | GPIO18 |  |  |  | ✓ |  |  |  | ✓ |  |
+| GND-side 6 | 17 | GPIO17 |  |  |  | ✓ |  |  |  | ✓ |  |
+| GND-side 7 | 21 | GPIO21 |  |  |  |  |  |  |  |  |  |
+| GND-side 8 | 16 | GPIO16 |  |  |  | ✓ |  |  |  |  |  |
+| GND-side 9 | NC | - |  |  |  |  |  |  |  |  |  |
+| GND-side 10 | GND | - |  |  | ✓ |  |  |  |  |  |  |
+| GND-side 11 | GND | - |  |  | ✓ |  |  |  |  |  |  |
+| GND-side 12 | 3V | - | ✓ |  |  |  |  |  |  |  |  |
 
 ### Cab Pin Notes
 
 | Pin | GPIO | Notes |
 | --- | --- | --- |
-| P2-1 | - | 3.3 V rail. |
-| P2-2 | GPIO1 | ADC1_CH0, TOUCH1. |
-| P2-3 | GPIO2 | ADC1_CH1, TOUCH2. |
-| P2-4 | GPIO3 | ADC1_CH2, TOUCH3, ESP32-S3 strapping pin. Avoid external circuits that force a reset-time state. |
-| P2-5 | GPIO10 | ADC1_CH9, TOUCH10, SPI_CS. |
-| P2-6 | GPIO11 | ADC2_CH0, TOUCH11, SPI_D. |
-| P2-7 | GPIO12 | ADC2_CH1, TOUCH12, SPI_CLK. |
-| P2-8 | GPIO13 | ADC2_CH2, TOUCH13, SPI_Q. |
-| P2-9 | - | Not connected. |
-| P2-10 | - | Not connected. |
-| P2-11 | - | Ground. |
-| P2-12 | - | 5 V rail. |
-| P1-1 | - | Ground. |
-| P1-2 | - | Ground. |
-| P1-3 | GPIO43 | UART0 TX / CLK_OUT1; used for serial when USB CDC is disabled. |
-| P1-4 | GPIO44 | UART0 RX / CLK_OUT2; used for serial when USB CDC is disabled. |
-| P1-5 | GPIO18 | ADC2_CH7, U1_RXD. |
-| P1-6 | GPIO17 | ADC2_CH6, U1_TXD. |
-| P1-7 | GPIO21 | Exposed GPIO. |
-| P1-8 | GPIO16 | ADC2_CH5. |
-| P1-9 | - | Not connected. |
-| P1-10 | - | Ground. |
-| P1-11 | - | Ground. |
-| P1-12 | - | 3.3 V rail. |
+| 3V-side 1 | - | 3.3 V rail. |
+| 3V-side 2 | GPIO1 | ADC1_CH0, TOUCH1. |
+| 3V-side 3 | GPIO2 | ADC1_CH1, TOUCH2. |
+| 3V-side 4 | GPIO3 | ADC1_CH2, TOUCH3, ESP32-S3 strapping pin. Avoid external circuits that force a reset-time state. |
+| 3V-side 5 | GPIO10 | ADC1_CH9, TOUCH10, SPI_CS. |
+| 3V-side 6 | GPIO11 | ADC2_CH0, TOUCH11, SPI_D. |
+| 3V-side 7 | GPIO12 | ADC2_CH1, TOUCH12, SPI_CLK. |
+| 3V-side 8 | GPIO13 | ADC2_CH2, TOUCH13, SPI_Q. |
+| 3V-side 9 | - | Not connected. |
+| 3V-side 10 | - | Not connected. |
+| 3V-side 11 | - | Ground. |
+| 3V-side 12 | - | 5 V rail. |
+| GND-side 1 | - | Ground. |
+| GND-side 2 | - | Ground. |
+| GND-side 3 | GPIO43 | UART0 TX / CLK_OUT1; used for serial when USB CDC is disabled. |
+| GND-side 4 | GPIO44 | UART0 RX / CLK_OUT2; used for serial when USB CDC is disabled. |
+| GND-side 5 | GPIO18 | ADC2_CH7, U1_RXD. |
+| GND-side 6 | GPIO17 | ADC2_CH6, U1_TXD. |
+| GND-side 7 | GPIO21 | Exposed GPIO. |
+| GND-side 8 | GPIO16 | ADC2_CH5. |
+| GND-side 9 | - | Not connected. |
+| GND-side 10 | - | Ground. |
+| GND-side 11 | - | Ground. |
+| GND-side 12 | - | 3.3 V rail. |
 
 ### Canopy Pinout - TENSTAR ROBOT ESP32-C3 SuperMini Plus
 
