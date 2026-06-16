@@ -5,12 +5,17 @@ ShutUp contains two separate PlatformIO firmware projects:
 - `Cab`: vehicle-cab device using a LilyGO T-Display S3.
 - `Canopy`: canopy device using a TENSTAR ROBOT ESP32-C3 SuperMini Plus with external antenna connection and onboard RGB LED.
 
-## Project Rules
+## AI Development Limitations
 
-- Hardware choices, GPIO assignments, and functionality are not assumed.
-- Features are added only after discussion and explicit approval.
+- Do not assume hardware choices, GPIO assignments, project functionality, or future expansion needs.
+- Do not add features, functionality, project behavior, libraries, hardware capacity, or "just in case" options without discussion and explicit approval.
+- Do not use generic device information when exact hardware details are required.
+- If required information is unknown and blocks progress, stop and ask.
 - Pin assignments must be checked against the exact physical hardware before any PCB or wiring decisions.
-- Prior project attempts or chats are not a source of truth for this repository.
+- Prior project attempts or chats are tainted and must not be used, scanned, summarized, or treated as a source of truth for this repository.
+- Keep the project scope under user control; document requirements as requirements, not as implemented features or implied commitments.
+- When the user specifically asks for a code fix, bulk update, feature add/modify, or documentation update, complete the full local change, commit, and push workflow.
+- Do not commit or push speculative work, exploratory edits, or unapproved scope changes.
 
 ## PlatformIO Projects
 
