@@ -100,7 +100,7 @@ Canopy LED behavior:
 
 Legend: `✓` means the pin has that confirmed property. A blank cell means that property is not confirmed or does not apply from the current sources.
 
-The pinout tables only list exposed pins. The tick-column headers use stacked text to reduce horizontal width.
+The pinout tables only list exposed pins.
 
 Sources used for this first pin reference:
 
@@ -114,7 +114,7 @@ Sources used for this first pin reference:
 
 ### Cab Pinout - LilyGO T-Display S3
 
-| Pin | Label | GPIO | 3<br>V<br>3 | 5<br>V | G<br>N<br>D | A<br>D<br>C | T<br>C<br>H | S<br>T<br>R | S<br>P<br>I | U<br>A<br>R<br>T | C<br>L<br>K |
+| Pin | Label | GPIO | 3V3 | 5V | GND | ADC | TCH | STR | SPI | UART | CLK |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | P2-1 | 3V | - | ✓ |  |  |  |  |  |  |  |  |
 | P2-2 | 1 | GPIO1 |  |  |  | ✓ | ✓ |  |  |  |  |
@@ -172,7 +172,7 @@ Sources used for this first pin reference:
 
 ### Canopy Pinout - TENSTAR ROBOT ESP32-C3 SuperMini Plus
 
-| Pin | Label | GPIO | 3<br>V<br>3 | 5<br>V | G<br>N<br>D | A<br>D<br>C | S<br>T<br>R | L<br>E<br>D | S<br>P<br>I | I<br>2<br>C | U<br>A<br>R<br>T | J<br>T<br>A<br>G |
+| Pin | Label | GPIO | 3V3 | 5V | GND | ADC | STR | LED | SPI | I2C | UART | JTAG |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | 5V | - |  | ✓ |  |  |  |  |  |  |  |  |
 | 2 | GND | - |  |  | ✓ |  |  |  |  |  |  |  |
