@@ -34,13 +34,13 @@ ShutUp contains two separate PlatformIO firmware projects:
 - Framework: Arduino
 - Confirmed onboard RGB LED pin: GPIO8
 
-No application GPIO assignments have been made. The onboard RGB LED pin is documented as a board fact, not selected for project functionality.
+Project GPIO assignments are listed in the selected pin assignments section below.
 
 ## Current Firmware Status
 
 - Both devices have startup branching for config mode vs normal ESP-NOW mode.
 - Config mode is entered when the device config button is held at boot.
-- The physical config-button GPIOs have not been assigned yet; they are isolated as `kConfigButtonGpio` in each device `main.cpp` and currently set to `kUnassignedPin`.
+- The physical config-button GPIOs are assigned in each device `main.cpp`.
 - Cab config AP SSID: `SHUTUP-CABCONF`, open network.
 - Canopy config AP SSID: `SHUTUP-CANCONF`, open network.
 - Config mode starts an HTTP config page and DNS captive-portal responder.
@@ -54,6 +54,35 @@ No application GPIO assignments have been made. The onboard RGB LED pin is docum
 - Normal mode initializes ESP-NOW:
   - Canopy acts as the always-powered state holder.
   - Cab acts as the state client and periodically requests Canopy state.
+
+## Selected Pin Assignments
+
+These assignments avoid known boot strapping pins, onboard display pins, onboard RGB LED pins, and JTAG pins.
+
+### Cab Selected Pins
+
+| Function | GPIO | Board label | Reason |
+| --- | --- | --- | --- |
+| Config button | GPIO2 | `2` | Exposed ADC/touch-capable GPIO, not marked as strapping, display, touch-controller reset/init, battery sense, onboard button, UART, I2C, or SPI. Safe for held-at-boot input. |
+| Mute input | GPIO1 | `1` | Exposed ADC/touch-capable pin, not marked as a strapping pin. Reserved so the mute control can be capacitive touch if desired. |
+| Speaker signal | GPIO13 | `13` | Exposed output-capable pin, not marked as strapping, display, touch-controller reset/init, battery sense, onboard button, UART, or I2C. |
+
+### Canopy Selected Pins
+
+| Function | GPIO | Board label | Reason |
+| --- | --- | --- | --- |
+| Config button | GPIO0 | `IO0/A0` | Exposed ADC-capable GPIO, not marked as ESP32-C3 strapping, onboard LED, SPI, I2C, UART, or JTAG. Safe for held-at-boot input. |
+| Mute button | GPIO1 | `IO1/A1` | Exposed ADC-capable GPIO, not marked as ESP32-C3 strapping, onboard LED, SPI, I2C, UART, or JTAG. |
+| WS2812S data | GPIO3 | `IO3/A3` | Exposed GPIO, not marked as strapping, onboard LED, SPI, I2C, UART, or JTAG. |
+| MCP23008 SDA | GPIO20 | `IO20/RX` | Exposed GPIO selected for remapped I2C SDA. Avoids strapping pins GPIO8/GPIO9 and avoids JTAG pins GPIO4-GPIO7. Native USB CDC is enabled for serial logging so GPIO20 is not needed for normal serial. |
+| MCP23008 SCL | GPIO21 | `IO21/TX` | Exposed GPIO selected for remapped I2C SCL. Avoids strapping pins GPIO8/GPIO9 and avoids JTAG pins GPIO4-GPIO7. Native USB CDC is enabled for serial logging so GPIO21 is not needed for normal serial. |
+| Speaker signal | GPIO10 | `IO10/RX` | Exposed GPIO, not marked as strapping, onboard LED, SPI, I2C, or JTAG. |
+
+Remaining hardware details still to confirm before final PCB/wiring:
+
+- MCP23008 I2C address pin wiring.
+- MCP23008 GPA0-GPA5 mapping to door sensors 1-6.
+- Cab mute input electrical style: capacitive touch pad or physical active-low button.
 
 ## Config Page Demos
 
@@ -78,7 +107,7 @@ PlatformIO also runs the generator before each device build.
 
 ## Hardware Requirements
 
-These requirements are the current agreed target behavior and hardware list. GPIO assignments are not made in this section.
+These requirements are the current agreed target behavior and hardware list.
 
 ### Cab Requirements
 

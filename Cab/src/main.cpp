@@ -13,14 +13,21 @@ namespace {
 constexpr const char *kDeviceName = "ShutUp Cab";
 constexpr const char *kConfigSsid = "SHUTUP-CABCONF";
 
-// Physical config-button GPIO has not been selected yet.
-// Set this to the approved Cab config-button GPIO once the wiring is decided.
-constexpr int kConfigButtonGpio = shutup::kUnassignedPin;
+constexpr int kConfigButtonGpio = 2;
+constexpr int kMuteInputGpio = 1;
+constexpr int kSpeakerSignalGpio = 13;
 
 shutup::SettingsStore settings;
 shutup::EspNowManager espNow;
 shutup::ConfigPortal portal;
 bool configMode = false;
+
+void setupHardwarePins() {
+  pinMode(kConfigButtonGpio, INPUT_PULLUP);
+  pinMode(kSpeakerSignalGpio, OUTPUT);
+  digitalWrite(kSpeakerSignalGpio, LOW);
+  // GPIO1 is reserved for the mute input. It supports capacitive touch if the final button uses a touch pad.
+}
 
 void startConfigMode() {
   configMode = true;
@@ -45,10 +52,7 @@ void startNormalMode() {
 void setup() {
   Serial.begin(115200);
   delay(200);
-
-  if (kConfigButtonGpio < 0) {
-    Serial.println("Cab config-button GPIO is not assigned; config mode cannot be entered by button yet.");
-  }
+  setupHardwarePins();
 
   if (shutup::bootButtonHeld(kConfigButtonGpio)) {
     startConfigMode();

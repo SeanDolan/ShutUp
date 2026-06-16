@@ -2,6 +2,7 @@
 #include <DNSServer.h>
 #include <Preferences.h>
 #include <WebServer.h>
+#include <Wire.h>
 
 #include "shutup_config_portal.h"
 #include "shutup_espnow.h"
@@ -13,14 +14,27 @@ namespace {
 constexpr const char *kDeviceName = "ShutUp Canopy";
 constexpr const char *kConfigSsid = "SHUTUP-CANCONF";
 
-// Physical config-button GPIO has not been selected yet.
-// Set this to the approved Canopy config-button GPIO once the wiring is decided.
-constexpr int kConfigButtonGpio = shutup::kUnassignedPin;
+constexpr int kConfigButtonGpio = 0;
+constexpr int kMuteButtonGpio = 1;
+constexpr int kLedStripDataGpio = 3;
+constexpr int kMcp23008SdaGpio = 20;
+constexpr int kMcp23008SclGpio = 21;
+constexpr int kSpeakerSignalGpio = 10;
 
 shutup::SettingsStore settings;
 shutup::EspNowManager espNow;
 shutup::ConfigPortal portal;
 bool configMode = false;
+
+void setupHardwarePins() {
+  pinMode(kConfigButtonGpio, INPUT_PULLUP);
+  pinMode(kMuteButtonGpio, INPUT_PULLUP);
+  pinMode(kLedStripDataGpio, OUTPUT);
+  digitalWrite(kLedStripDataGpio, LOW);
+  pinMode(kSpeakerSignalGpio, OUTPUT);
+  digitalWrite(kSpeakerSignalGpio, LOW);
+  Wire.begin(kMcp23008SdaGpio, kMcp23008SclGpio);
+}
 
 uint8_t readDoorOpenMask() {
   // MCP23008 wiring and address are not assigned yet.
@@ -51,10 +65,7 @@ void startNormalMode() {
 void setup() {
   Serial.begin(115200);
   delay(200);
-
-  if (kConfigButtonGpio < 0) {
-    Serial.println("Canopy config-button GPIO is not assigned; config mode cannot be entered by button yet.");
-  }
+  setupHardwarePins();
 
   if (shutup::bootButtonHeld(kConfigButtonGpio)) {
     startConfigMode();
