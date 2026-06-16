@@ -42,7 +42,12 @@ Hardware:
 - LilyGO T-Display S3.
 - Mute button, possibly implemented as a capacitive touch button.
 - Config button, physically small.
-- Speaker or alarm sounder. Candidate part: Jaycar `XC3744`; exact electrical specs still need to be confirmed before choosing a drive circuit or GPIO.
+- Speaker or alarm sounder: Jaycar `XC3744`.
+  - Powered from 5 V.
+  - Connections: signal, 5 V input, ground.
+  - Includes 23 mm speaker, 2 W amplifier, and volume trimpot.
+  - Jaycar notes the volume should be adjusted to minimum before use to avoid speaker damage.
+  - Jaycar notes this module has an onboard digital-to-analogue controller and is driven from a digital pin/library.
 
 Config behavior:
 
@@ -56,10 +61,19 @@ Config behavior:
 Hardware:
 
 - TENSTAR ROBOT ESP32-C3 SuperMini Plus.
-- WS2812S 8-LED board.
+- RGB LED board: Jaycar `XC4380` RGB LED 8 pixel strip/board.
+  - Connections: DIN, VCC, GND.
+  - VCC range: 4-7 VDC.
+  - Data input pin is reconfigurable in firmware.
+  - Jaycar references the Adafruit NeoPixel library for control.
 - Mute button.
 - Config button.
-- Speaker or alarm sounder. Candidate part: Jaycar `XC3744`; exact electrical specs still need to be confirmed before choosing a drive circuit or GPIO.
+- Speaker or alarm sounder: Jaycar `XC3744`.
+  - Powered from 5 V.
+  - Connections: signal, 5 V input, ground.
+  - Includes 23 mm speaker, 2 W amplifier, and volume trimpot.
+  - Jaycar notes the volume should be adjusted to minimum before use to avoid speaker damage.
+  - Jaycar notes this module has an onboard digital-to-analogue controller and is driven from a digital pin/library.
 - MCP23008 GPIO expander for normally closed reed-switch inputs.
 - Up to 6 normally closed reed switches for monitored doors.
 
@@ -91,6 +105,8 @@ Sources used for this first pin reference:
 - LilyGO T-Display-S3 official pin map: https://raw.githubusercontent.com/Xinyuan-LilyGO/T-Display-S3/main/image/T-DISPLAY-S3.jpg
 - LilyGO T-Display-S3 README and hardware notes: https://github.com/Xinyuan-LilyGO/T-Display-S3
 - TENSTAR ROBOT ESP32-C3 SuperMini Plus public reference: https://www.espboards.dev/esp32/esp32-c3-super-mini-plus/
+- Jaycar XC3744 datasheet: https://media.jaycar.com.au/product/resources/XC3744_datasheetMain_112903.pdf
+- Jaycar XC4380 manual: https://media.jaycar.com.au/product/resources/XC4380_manualMain_78735.pdf
 - Espressif ESP32-S3 datasheet: https://www.espressif.com/sites/default/files/documentation/esp32-s3_datasheet_en.pdf
 - Espressif ESP32-C3 datasheet: https://www.espressif.com/sites/default/files/documentation/esp32-c3_datasheet_en.pdf
 
