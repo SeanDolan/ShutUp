@@ -143,32 +143,32 @@ Sources used for this first pin reference:
 
 ### Cab Pin Notes
 
-| GPIO | Pin | Notes |
+| Pin | GPIO | Notes |
 | --- | --- | --- |
-| - | P2-1 | 3.3 V rail. |
-| GPIO1 | P2-2 | ADC1_CH0, TOUCH1. |
-| GPIO2 | P2-3 | ADC1_CH1, TOUCH2. |
-| GPIO3 | P2-4 | ADC1_CH2, TOUCH3, ESP32-S3 strapping pin. Avoid external circuits that force a reset-time state. |
-| GPIO10 | P2-5 | ADC1_CH9, TOUCH10, SPI_CS. |
-| GPIO11 | P2-6 | ADC2_CH0, TOUCH11, SPI_D. |
-| GPIO12 | P2-7 | ADC2_CH1, TOUCH12, SPI_CLK. |
-| GPIO13 | P2-8 | ADC2_CH2, TOUCH13, SPI_Q. |
-| - | P2-9 | Not connected. |
-| - | P2-10 | Not connected. |
-| - | P2-11 | Ground. |
-| - | P2-12 | 5 V rail. |
-| - | P1-1 | Ground. |
-| - | P1-2 | Ground. |
-| GPIO43 | P1-3 | UART0 TX / CLK_OUT1; used for serial when USB CDC is disabled. |
-| GPIO44 | P1-4 | UART0 RX / CLK_OUT2; used for serial when USB CDC is disabled. |
-| GPIO18 | P1-5 | ADC2_CH7, U1_RXD. |
-| GPIO17 | P1-6 | ADC2_CH6, U1_TXD. |
-| GPIO21 | P1-7 | Exposed GPIO. |
-| GPIO16 | P1-8 | ADC2_CH5. |
-| - | P1-9 | Not connected. |
-| - | P1-10 | Ground. |
-| - | P1-11 | Ground. |
-| - | P1-12 | 3.3 V rail. |
+| P2-1 | - | 3.3 V rail. |
+| P2-2 | GPIO1 | ADC1_CH0, TOUCH1. |
+| P2-3 | GPIO2 | ADC1_CH1, TOUCH2. |
+| P2-4 | GPIO3 | ADC1_CH2, TOUCH3, ESP32-S3 strapping pin. Avoid external circuits that force a reset-time state. |
+| P2-5 | GPIO10 | ADC1_CH9, TOUCH10, SPI_CS. |
+| P2-6 | GPIO11 | ADC2_CH0, TOUCH11, SPI_D. |
+| P2-7 | GPIO12 | ADC2_CH1, TOUCH12, SPI_CLK. |
+| P2-8 | GPIO13 | ADC2_CH2, TOUCH13, SPI_Q. |
+| P2-9 | - | Not connected. |
+| P2-10 | - | Not connected. |
+| P2-11 | - | Ground. |
+| P2-12 | - | 5 V rail. |
+| P1-1 | - | Ground. |
+| P1-2 | - | Ground. |
+| P1-3 | GPIO43 | UART0 TX / CLK_OUT1; used for serial when USB CDC is disabled. |
+| P1-4 | GPIO44 | UART0 RX / CLK_OUT2; used for serial when USB CDC is disabled. |
+| P1-5 | GPIO18 | ADC2_CH7, U1_RXD. |
+| P1-6 | GPIO17 | ADC2_CH6, U1_TXD. |
+| P1-7 | GPIO21 | Exposed GPIO. |
+| P1-8 | GPIO16 | ADC2_CH5. |
+| P1-9 | - | Not connected. |
+| P1-10 | - | Ground. |
+| P1-11 | - | Ground. |
+| P1-12 | - | 3.3 V rail. |
 
 ### Canopy Pinout - TENSTAR ROBOT ESP32-C3 SuperMini Plus
 
@@ -193,24 +193,24 @@ Sources used for this first pin reference:
 
 ### Canopy Pin Notes
 
-| GPIO | Pin | Notes |
+| Pin | GPIO | Notes |
 | --- | --- | --- |
-| - | 1 | 5 V input. |
-| - | 2 | Ground. |
-| - | 3 | 3.3 V output. |
-| GPIO0 | 4 | ADC-capable GPIO. |
-| GPIO1 | 5 | ADC-capable GPIO. |
-| GPIO2 | 6 | ADC-capable GPIO; ESP32-C3 strapping pin. Avoid external circuits that force a reset-time state. |
-| GPIO3 | 7 | ADC-capable GPIO. |
-| GPIO4 | 8 | ADC-capable, SPI SCK, JTAG MTMS caution. |
-| GPIO5 | 9 | ADC-capable, SPI MISO, JTAG MTDI caution. |
-| GPIO6 | 10 | SPI MOSI, JTAG MTCK caution. |
-| GPIO7 | 11 | SPI SS, JTAG MTDO caution. |
-| GPIO8 | 12 | Onboard RGB LED / `RGB_BUILTIN`, I2C SDA label, ESP32-C3 strapping pin. Do not treat as ordinary I2C/data if using the onboard RGB LED. |
-| GPIO9 | 13 | I2C SCL label, ESP32-C3 boot-mode strapping pin. Download/boot mode is controlled by GPIO9 being LOW at reset. |
-| GPIO10 | 14 | Board-labeled RX. |
-| GPIO21 | 15 | UART0 TX. |
-| GPIO20 | 16 | UART0 RX. |
+| 1 | - | 5 V input. |
+| 2 | - | Ground. |
+| 3 | - | 3.3 V output. |
+| 4 | GPIO0 | ADC-capable GPIO. |
+| 5 | GPIO1 | ADC-capable GPIO. |
+| 6 | GPIO2 | ADC-capable GPIO; ESP32-C3 strapping pin. Avoid external circuits that force a reset-time state. |
+| 7 | GPIO3 | ADC-capable GPIO. |
+| 8 | GPIO4 | ADC-capable, SPI SCK, JTAG MTMS caution. |
+| 9 | GPIO5 | ADC-capable, SPI MISO, JTAG MTDI caution. |
+| 10 | GPIO6 | SPI MOSI, JTAG MTCK caution. |
+| 11 | GPIO7 | SPI SS, JTAG MTDO caution. |
+| 12 | GPIO8 | Onboard RGB LED / `RGB_BUILTIN`, I2C SDA label, ESP32-C3 strapping pin. Do not treat as ordinary I2C/data if using the onboard RGB LED. |
+| 13 | GPIO9 | I2C SCL label, ESP32-C3 boot-mode strapping pin. Download/boot mode is controlled by GPIO9 being LOW at reset. |
+| 14 | GPIO10 | Board-labeled RX. |
+| 15 | GPIO21 | UART0 TX. |
+| 16 | GPIO20 | UART0 RX. |
 
 ## Build
 
