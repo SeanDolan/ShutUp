@@ -31,6 +31,57 @@ ShutUp contains two separate PlatformIO firmware projects:
 
 No application GPIO assignments have been made. The onboard RGB LED pin is documented as a board fact, not selected for project functionality.
 
+## Hardware Requirements
+
+These requirements are the current agreed target behavior and hardware list. GPIO assignments are not made in this section.
+
+### Cab Requirements
+
+Hardware:
+
+- LilyGO T-Display S3.
+- Mute button, possibly implemented as a capacitive touch button.
+- Config button, physically small.
+- Speaker or alarm sounder. Candidate part: Jaycar `XC3744`; exact electrical specs still need to be confirmed before choosing a drive circuit or GPIO.
+
+Config behavior:
+
+- If the config button is detected as held during startup, the Cab device starts an open Wi-Fi configuration access point.
+- Cab config SSID: `SHUTUP-CABCONF`
+- Cab config AP password: none.
+- The config AP presents a captive portal for Cab device configuration.
+
+### Canopy Requirements
+
+Hardware:
+
+- TENSTAR ROBOT ESP32-C3 SuperMini Plus.
+- WS2812S 8-LED board.
+- Mute button.
+- Config button.
+- Speaker or alarm sounder. Candidate part: Jaycar `XC3744`; exact electrical specs still need to be confirmed before choosing a drive circuit or GPIO.
+- MCP23008 GPIO expander for normally closed reed-switch inputs.
+- Up to 6 normally closed reed switches for monitored doors.
+
+Config behavior:
+
+- If the config button is detected as held during startup, the Canopy device starts an open Wi-Fi configuration access point.
+- Canopy config SSID: `SHUTUP-CANCONF`
+- Canopy config AP password: none.
+- The config AP presents a captive portal for Canopy device configuration.
+
+Canopy LED behavior:
+
+- LED 1: power/status.
+- LED 2: heartbeat/connection state when the Cab device is connected.
+- LEDs 3-8: six monitored door states.
+
+### Communication Model
+
+- ESP-NOW is the intended main communication path after the Cab and Canopy devices are paired through their configuration pages.
+- The Canopy device is always powered and acts as the persistent state holder.
+- The Cab device queries or receives the current Canopy state over ESP-NOW, conceptually similar to requesting `/state` in an HTTP system, but without using Wi-Fi/HTTP for normal operation.
+
 ## Pin Reference
 
 Legend: `✓` means the pin has that confirmed property. A blank cell means that property is not confirmed or does not apply from the current sources.
