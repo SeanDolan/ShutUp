@@ -54,6 +54,10 @@ Project GPIO assignments are listed in the selected pin assignments section belo
 - Normal mode initializes ESP-NOW:
   - Canopy acts as the always-powered state holder.
   - Cab acts as the state client and periodically requests Canopy state.
+- Cab blacks out the T-Display-S3 screen immediately at startup, then shows config mode or normal status screens.
+- Canopy reads door state through MCP23008 GPA0-GPA5 and reports enabled door states over ESP-NOW.
+- Canopy drives the 8 WS2812S LEDs as power, connectivity, and six door state indicators.
+- Canopy config includes the action sound table for Startup, Connectivity success, Connectivity error, Doors ok, and Door alarm.
 
 ## Selected Pin Assignments
 
@@ -64,7 +68,7 @@ These assignments avoid known boot strapping pins, onboard display pins, onboard
 | Function | GPIO | Board label | Reason |
 | --- | --- | --- | --- |
 | Config button | GPIO2 | `2` | Exposed ADC/touch-capable GPIO, not marked as strapping, display, touch-controller reset/init, battery sense, onboard button, UART, I2C, or SPI. Safe for held-at-boot input. |
-| Mute input | GPIO1 | `1` | Exposed ADC/touch-capable pin, not marked as a strapping pin. Reserved so the mute control can be capacitive touch if desired. |
+| Mute input | GPIO1 | `1` | Exposed ADC/touch-capable pin, not marked as a strapping pin. Currently coded as an active-low input. |
 | Speaker signal | GPIO13 | `13` | Exposed output-capable pin, not marked as strapping, display, touch-controller reset/init, battery sense, onboard button, UART, or I2C. |
 
 ### Canopy Selected Pins
@@ -78,11 +82,11 @@ These assignments avoid known boot strapping pins, onboard display pins, onboard
 | MCP23008 SCL | GPIO21 | `IO21/TX` | Exposed GPIO selected for remapped I2C SCL. Avoids strapping pins GPIO8/GPIO9 and avoids JTAG pins GPIO4-GPIO7. Native USB CDC is enabled for serial logging so GPIO21 is not needed for normal serial. |
 | Speaker signal | GPIO10 | `IO10/RX` | Exposed GPIO, not marked as strapping, onboard LED, SPI, I2C, or JTAG. |
 
-Remaining hardware details still to confirm before final PCB/wiring:
+MCP23008 wiring required by the current code:
 
-- MCP23008 I2C address pin wiring.
-- MCP23008 GPA0-GPA5 mapping to door sensors 1-6.
-- Cab mute input electrical style: capacitive touch pad or physical active-low button.
+- MCP23008 address is `0x20`; A0, A1, and A2 must be tied low.
+- Door sensor 1-6 map to MCP23008 GPA0-GPA5 in order.
+- Normally closed reed switches should pull the MCP23008 input low when closed; the code enables MCP23008 pull-ups and treats high as open/error.
 
 ## Config Page Demos
 
@@ -160,9 +164,9 @@ Config behavior:
 
 Canopy LED behavior:
 
-- LED 1: power/status.
-- LED 2: heartbeat/connection state when the Cab device is connected.
-- LEDs 3-8: six monitored door states.
+- LED 1: green when powered/running.
+- LED 2: red when Cab is disconnected, orange when Cab connectivity is stale/weak, blue when Cab is connected.
+- LEDs 3-8: red when the matching door is open/error, green when closed, off when that door sensor is disabled.
 
 ### Communication Model
 

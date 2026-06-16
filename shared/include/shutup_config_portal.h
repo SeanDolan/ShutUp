@@ -6,16 +6,19 @@
 #include <WiFi.h>
 
 #include "shutup_espnow.h"
+#include "shutup_sound.h"
 #include "web_assets.h"
 
 namespace shutup {
 
 class ConfigPortal {
 public:
-  bool begin(DeviceRole role, SettingsStore &settings, EspNowManager &espNow, const char *ssid) {
+  bool begin(DeviceRole role, SettingsStore &settings, EspNowManager &espNow, const char *ssid,
+             SoundPlayer *soundPlayer = nullptr) {
     role_ = role;
     settings_ = &settings;
     espNow_ = &espNow;
+    soundPlayer_ = soundPlayer;
     WiFi.mode(WIFI_AP_STA);
     WiFi.setSleep(false);
     if (!WiFi.softAP(ssid, nullptr, kEspNowChannel)) {
@@ -49,6 +52,7 @@ private:
     server_.on("/api/config", HTTP_POST, [this]() { handleSaveConfig(); });
     server_.on("/api/pair/start", HTTP_POST, [this]() { handlePairStart(); });
     server_.on("/api/pair/status", HTTP_GET, [this]() { handlePairStatus(); });
+    server_.on("/api/sound/demo", HTTP_POST, [this]() { handleSoundDemo(); });
     server_.on("/api/reboot", HTTP_POST, [this]() { handleReboot(); });
     server_.onNotFound([this]() { redirectHome(); });
   }
@@ -76,9 +80,18 @@ private:
       settings_->setDeviceName(server_.arg("deviceName"));
     }
     if (role_ == DeviceRole::Canopy) {
-      for (uint8_t i = 0; i < 6; ++i) {
+      for (uint8_t i = 0; i < kDoorCount; ++i) {
         const String key = String("door") + String(i + 1);
         settings_->setDoorEnabled(i, server_.hasArg(key));
+      }
+      for (uint8_t i = 0; i < kSoundActionCount; ++i) {
+        const String prefix = String("action") + String(i);
+        settings_->setSoundAction(
+            i,
+            server_.arg(prefix + "Cab"),
+            server_.arg(prefix + "Canopy"),
+            parseUIntArg(prefix + "Repeat"),
+            parseUIntArg(prefix + "Delay"));
       }
     }
     server_.send(200, "application/json", configJson());
@@ -95,6 +108,13 @@ private:
     server_.send(200, "application/json", pairStatusJson());
   }
 
+  void handleSoundDemo() {
+    if (soundPlayer_ && server_.hasArg("sound")) {
+      soundPlayer_->playNow(server_.arg("sound"));
+    }
+    server_.send(200, "application/json", "{\"ok\":true}");
+  }
+
   void handleReboot() {
     server_.send(200, "application/json", "{\"ok\":true,\"message\":\"Rebooting\"}");
     delay(250);
@@ -108,7 +128,25 @@ private:
     json += "\"localMac\":\"" + (espNow_ ? espNow_->localMacString() : WiFi.macAddress()) + "\",";
     json += "\"hasPeer\":" + String(settings_->hasPeer() ? "true" : "false") + ",";
     json += "\"peerMac\":\"" + settings_->peerMacString() + "\",";
-    json += "\"doorEnabledMask\":" + String(settings_->doorEnabledMask());
+    json += "\"doorEnabledMask\":" + String(settings_->doorEnabledMask()) + ",";
+    json += "\"soundOptions\":[\"";
+    json += kNoSoundName;
+    json += "\"],";
+    json += "\"soundActions\":[";
+    for (uint8_t i = 0; i < kSoundActionCount; ++i) {
+      const SoundActionConfig &action = settings_->soundAction(i);
+      if (i > 0) {
+        json += ",";
+      }
+      json += "{";
+      json += "\"name\":\"" + String(soundActionName(i)) + "\",";
+      json += "\"cab\":\"" + escapeJson(action.cabSound) + "\",";
+      json += "\"canopy\":\"" + escapeJson(action.canopySound) + "\",";
+      json += "\"repeat\":" + String(action.repeatMs) + ",";
+      json += "\"delay\":" + String(action.delayMs);
+      json += "}";
+    }
+    json += "]";
     json += "}";
     return json;
   }
@@ -140,11 +178,24 @@ private:
     return out;
   }
 
+  uint32_t parseUIntArg(const String &key) {
+    if (!server_.hasArg(key)) {
+      return 0;
+    }
+    String value = server_.arg(key);
+    value.trim();
+    if (value.length() == 0) {
+      return 0;
+    }
+    return static_cast<uint32_t>(value.toInt());
+  }
+
   DNSServer dns_;
   WebServer server_{80};
   DeviceRole role_{DeviceRole::Cab};
   SettingsStore *settings_{nullptr};
   EspNowManager *espNow_{nullptr};
+  SoundPlayer *soundPlayer_{nullptr};
 };
 
 }  // namespace shutup

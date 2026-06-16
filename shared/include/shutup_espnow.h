@@ -16,6 +16,7 @@ enum class PacketType : uint8_t {
   StateRequest = 3,
   StateResponse = 4,
   Heartbeat = 5,
+  ConfigSync = 6,
 };
 
 struct ShutupPacket {
@@ -28,6 +29,12 @@ struct ShutupPacket {
   uint8_t doorEnabledMask;
   uint8_t doorOpenMask;
   char name[24];
+  uint8_t configIndex;
+  uint8_t reserved[3];
+  uint32_t repeatMs;
+  uint32_t delayMs;
+  char cabSound[24];
+  char canopySound[24];
 };
 
 class EspNowManager {
@@ -63,9 +70,16 @@ public:
       pairingActive_ = false;
     }
     if (!configMode_ && role_ == DeviceRole::Cab && settings_ && settings_->hasPeer()) {
-      if (now - lastStateRequestMs_ >= 2000) {
+      if (now - lastStateRequestMs_ >= 1000) {
         lastStateRequestMs_ = now;
         sendStateRequest();
+      }
+    }
+    if (!configMode_ && role_ == DeviceRole::Canopy && settings_ && settings_->hasPeer()) {
+      if (now - lastConfigSyncMs_ >= 1000) {
+        lastConfigSyncMs_ = now;
+        sendConfigSync(settings_->peerMac(), nextConfigSyncIndex_);
+        nextConfigSyncIndex_ = static_cast<uint8_t>((nextConfigSyncIndex_ + 1) % kSoundActionCount);
       }
     }
   }
@@ -83,6 +97,17 @@ public:
   bool normalLinkReady() const { return settings_ && settings_->hasPeer(); }
   uint8_t lastDoorEnabledMask() const { return lastDoorEnabledMask_; }
   uint8_t lastDoorOpenMask() const { return lastDoorOpenMask_; }
+  uint32_t lastStateMessageMs() const { return lastStateMessageMs_; }
+  uint32_t lastCabSeenMs() const { return lastCabSeenMs_; }
+  bool cabLinkActive(uint32_t now = millis()) const { return lastCabSeenMs_ != 0 && now - lastCabSeenMs_ <= 5000; }
+  bool cabLinkStale(uint32_t now = millis()) const { return lastCabSeenMs_ != 0 && now - lastCabSeenMs_ > 5000 && now - lastCabSeenMs_ <= 15000; }
+  bool cabStateFresh(uint32_t now = millis()) const { return lastStateMessageMs_ != 0 && now - lastStateMessageMs_ <= 5000; }
+  uint8_t heartbeatSuccessPercent() const {
+    if (heartbeatSent_ == 0) {
+      return 0;
+    }
+    return static_cast<uint8_t>((heartbeatOk_ * 100U) / heartbeatSent_);
+  }
 
   void setCanopyDoorState(uint8_t enabledMask, uint8_t openMask) {
     doorEnabledMask_ = enabledMask;
@@ -132,6 +157,7 @@ private:
       return;
     }
     if (type == PacketType::StateRequest && role_ == DeviceRole::Canopy) {
+      lastCabSeenMs_ = millis();
       sendStateResponse(senderMac);
       return;
     }
@@ -139,6 +165,13 @@ private:
       lastDoorEnabledMask_ = packet.doorEnabledMask;
       lastDoorOpenMask_ = packet.doorOpenMask;
       lastStateMessageMs_ = millis();
+      if (heartbeatOk_ < 250) {
+        ++heartbeatOk_;
+      }
+      return;
+    }
+    if (type == PacketType::ConfigSync && role_ == DeviceRole::Cab && packet.configIndex < kSoundActionCount) {
+      settings_->setSoundAction(packet.configIndex, packet.cabSound, packet.canopySound, packet.repeatMs, packet.delayMs);
       return;
     }
   }
@@ -193,12 +226,33 @@ private:
     }
     ShutupPacket packet{};
     fillPacket(packet, PacketType::StateRequest);
+    if (heartbeatSent_ < 250) {
+      ++heartbeatSent_;
+    } else {
+      heartbeatSent_ = static_cast<uint16_t>((heartbeatSent_ / 2U) + 1U);
+      heartbeatOk_ = static_cast<uint16_t>(heartbeatOk_ / 2U);
+    }
     esp_now_send(settings_->peerMac(), reinterpret_cast<uint8_t *>(&packet), sizeof(packet));
   }
 
   void sendStateResponse(const uint8_t mac[6]) {
     ShutupPacket packet{};
     fillPacket(packet, PacketType::StateResponse);
+    esp_now_send(mac, reinterpret_cast<uint8_t *>(&packet), sizeof(packet));
+  }
+
+  void sendConfigSync(const uint8_t mac[6], uint8_t index) {
+    if (!settings_ || index >= kSoundActionCount) {
+      return;
+    }
+    ShutupPacket packet{};
+    fillPacket(packet, PacketType::ConfigSync);
+    const SoundActionConfig &action = settings_->soundAction(index);
+    packet.configIndex = index;
+    packet.repeatMs = action.repeatMs;
+    packet.delayMs = action.delayMs;
+    strlcpy(packet.cabSound, action.cabSound.c_str(), sizeof(packet.cabSound));
+    strlcpy(packet.canopySound, action.canopySound.c_str(), sizeof(packet.canopySound));
     esp_now_send(mac, reinterpret_cast<uint8_t *>(&packet), sizeof(packet));
   }
 
@@ -215,7 +269,12 @@ private:
   uint32_t lastPairBroadcastMs_{0};
   uint32_t lastStateRequestMs_{0};
   uint32_t lastStateMessageMs_{0};
+  uint32_t lastCabSeenMs_{0};
+  uint32_t lastConfigSyncMs_{0};
   uint32_t sequence_{0};
+  uint16_t heartbeatSent_{0};
+  uint16_t heartbeatOk_{0};
+  uint8_t nextConfigSyncIndex_{0};
   uint8_t doorEnabledMask_{0};
   uint8_t doorOpenMask_{0};
   uint8_t lastDoorEnabledMask_{0};

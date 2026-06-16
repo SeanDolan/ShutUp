@@ -143,7 +143,7 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
     section { background: #fff; border: 1px solid var(--line); border-radius: 6px; margin-bottom: 14px; padding: 16px; }
     h2 { margin: 0 0 12px; font-size: 18px; }
     label { display: block; font-weight: 700; margin: 12px 0 6px; }
-    input[type="text"] { width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 4px; font-size: 16px; }
+    input[type="text"], input[type="number"], select { width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 4px; font-size: 16px; }
     button { border: 0; border-radius: 4px; padding: 10px 14px; background: var(--accent); color: #fff; font-weight: 700; font-size: 15px; cursor: pointer; }
     button.secondary { background: #56636b; }
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
@@ -155,6 +155,11 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
     .door label { display: flex; gap: 8px; align-items: center; margin: 0; }
     .ok { color: var(--good); font-weight: 700; }
     .warn { color: var(--warn); font-weight: 700; }
+    .sound-table { width: 100%; border-collapse: collapse; }
+    .sound-table th, .sound-table td { border-bottom: 1px solid var(--line); padding: 8px; text-align: left; vertical-align: middle; }
+    .sound-table th { background: var(--panel); }
+    .sound-table td:first-child { font-weight: 700; min-width: 150px; }
+    .sound-table button { width: 100%; }
   </style>
 </head>
 <body>
@@ -176,6 +181,23 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
         <button id="saveBtn">Save config</button>
         <button id="rebootBtn" class="secondary">Reboot</button>
       </div>
+    </section>
+
+    <section>
+      <h2>Action Sounds</h2>
+      <table class="sound-table">
+        <thead>
+          <tr>
+            <th>Action</th>
+            <th>Cab</th>
+            <th>Canopy</th>
+            <th>Repeat</th>
+            <th>Delay</th>
+            <th>Demo</th>
+          </tr>
+        </thead>
+        <tbody id="soundRows"></tbody>
+      </table>
     </section>
 
     <section>
@@ -208,7 +230,15 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
       localMac: "34:85:18:CA:10:02",
       hasPeer: true,
       peerMac: "24:6F:28:CA:B0:01",
-      doorEnabledMask: 0b00111111
+      doorEnabledMask: 0b00111111,
+      soundOptions: ["None"],
+      soundActions: [
+        { name: "Startup", cab: "None", canopy: "None", repeat: 0, delay: 0 },
+        { name: "Connectivity success", cab: "None", canopy: "None", repeat: 0, delay: 0 },
+        { name: "Connectivity error", cab: "None", canopy: "None", repeat: 0, delay: 0 },
+        { name: "Doors ok", cab: "None", canopy: "None", repeat: 0, delay: 0 },
+        { name: "Door alarm", cab: "None", canopy: "None", repeat: 0, delay: 0 }
+      ]
     };
 
     const $ = (id) => document.getElementById(id);
@@ -226,6 +256,31 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
       for (let i = 0; i < 6; i++) {
         $("door" + (i + 1)).checked = (config.doorEnabledMask & (1 << i)) !== 0;
       }
+      renderSoundRows(config);
+    }
+
+    function soundOptionsHtml(options, selected) {
+      return (options || ["None"]).map((name) => {
+        const safe = String(name).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll('"', "&quot;");
+        return `<option value="${safe}" ${name === selected ? "selected" : ""}>${safe}</option>`;
+      }).join("");
+    }
+
+    function renderSoundRows(config) {
+      const options = config.soundOptions || ["None"];
+      const actions = config.soundActions || demoConfig.soundActions;
+      $("soundRows").innerHTML = actions.map((action, index) => `
+        <tr>
+          <td>${action.name}</td>
+          <td><select id="action${index}Cab">${soundOptionsHtml(options, action.cab || "None")}</select></td>
+          <td><select id="action${index}Canopy">${soundOptionsHtml(options, action.canopy || "None")}</select></td>
+          <td><input id="action${index}Repeat" type="number" min="0" step="100" value="${action.repeat || 0}"></td>
+          <td><input id="action${index}Delay" type="number" min="0" step="100" value="${action.delay || 0}"></td>
+          <td><button type="button" data-demo="${index}">Play</button></td>
+        </tr>`).join("");
+      document.querySelectorAll("[data-demo]").forEach((button) => {
+        button.addEventListener("click", () => demoSound(Number(button.dataset.demo)));
+      });
     }
 
     async function loadConfig() {
@@ -238,6 +293,12 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
       body.set("deviceName", $("deviceName").value);
       for (let i = 1; i <= 6; i++) {
         if ($("door" + i).checked) body.set("door" + i, "on");
+      }
+      for (let i = 0; i < demoConfig.soundActions.length; i++) {
+        body.set(`action${i}Cab`, $(`action${i}Cab`).value);
+        body.set(`action${i}Canopy`, $(`action${i}Canopy`).value);
+        body.set(`action${i}Repeat`, $(`action${i}Repeat`).value);
+        body.set(`action${i}Delay`, $(`action${i}Delay`).value);
       }
       try { render(await api("/api/config", { method: "POST", body })); }
       catch {
@@ -264,6 +325,12 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
 
     async function rebootDevice() {
       try { await api("/api/reboot", { method: "POST" }); } catch {}
+    }
+
+    async function demoSound(index) {
+      const body = new URLSearchParams();
+      body.set("sound", $(`action${index}Canopy`).value);
+      try { await api("/api/sound/demo", { method: "POST", body }); } catch {}
     }
 
     $("saveBtn").addEventListener("click", saveConfig);
