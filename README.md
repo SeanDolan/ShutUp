@@ -36,6 +36,46 @@ ShutUp contains two separate PlatformIO firmware projects:
 
 No application GPIO assignments have been made. The onboard RGB LED pin is documented as a board fact, not selected for project functionality.
 
+## Current Firmware Status
+
+- Both devices have startup branching for config mode vs normal ESP-NOW mode.
+- Config mode is entered when the device config button is held at boot.
+- The physical config-button GPIOs have not been assigned yet; they are isolated as `kConfigButtonGpio` in each device `main.cpp` and currently set to `kUnassignedPin`.
+- Cab config AP SSID: `SHUTUP-CABCONF`, open network.
+- Canopy config AP SSID: `SHUTUP-CANCONF`, open network.
+- Config mode starts an HTTP config page and DNS captive-portal responder.
+- ESP-NOW pairing scaffolding is implemented:
+  - Put both devices into config mode.
+  - Connect to either config AP.
+  - Press `Pair Devices`.
+  - The device whose page is open broadcasts a pairing request.
+  - The other device can respond without its page being open.
+  - The peer MAC is stored in non-volatile preferences.
+- Normal mode initializes ESP-NOW:
+  - Canopy acts as the always-powered state holder.
+  - Cab acts as the state client and periodically requests Canopy state.
+
+## Config Page Demos
+
+The real config pages are stored in `shared/web/` and are the source of truth:
+
+- `shared/web/config_cab.html`
+- `shared/web/config_can.html`
+
+The firmware header and demo files are generated from those source pages:
+
+- `shared/generated/web_assets.h`
+- `demo/config_cab.html`
+- `demo/config_can.html`
+
+Run this after editing files in `shared/web/`:
+
+```powershell
+& 'C:\Users\seanl\.platformio\penv\Scripts\python.exe' tools\generate_web_assets.py
+```
+
+PlatformIO also runs the generator before each device build.
+
 ## Hardware Requirements
 
 These requirements are the current agreed target behavior and hardware list. GPIO assignments are not made in this section.
