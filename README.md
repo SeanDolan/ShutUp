@@ -100,6 +100,15 @@ Canopy LED behavior:
 
 Legend: `✓` means the pin has that confirmed property. A blank cell means that property is not confirmed or does not apply from the current sources.
 
+Column abbreviations:
+
+- `Phys`: physical pin or board position.
+- `Lbl`: board silkscreen label.
+- `Tch`: capacitive touch.
+- `Strap`: boot strapping pin; avoid external circuits that can force the wrong state during reset.
+- `Clk`: clock output.
+- `Pwr`: power-related board function.
+
 Sources used for this first pin reference:
 
 - LilyGO T-Display-S3 official pin map: https://raw.githubusercontent.com/Xinyuan-LilyGO/T-Display-S3/main/image/T-DISPLAY-S3.jpg
@@ -114,91 +123,134 @@ Sources used for this first pin reference:
 
 These are the exposed header pins only. Display, battery, button, and power-control GPIOs are listed separately below.
 
-| Physical pin | Board label | GPIO | 3V3 | 5V | GND | ADC | Touch | Strapping | SPI | UART | Clock out | Notes |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| P2-1 left top | 3V | - | ✓ |  |  |  |  |  |  |  |  | 3.3 V rail |
-| P2-2 | 1 | GPIO1 |  |  |  | ✓ | ✓ |  |  |  |  | ADC1_CH0, TOUCH1 |
-| P2-3 | 2 | GPIO2 |  |  |  | ✓ | ✓ |  |  |  |  | ADC1_CH1, TOUCH2 |
-| P2-4 | 3 | GPIO3 |  |  |  | ✓ | ✓ | ✓ |  |  |  | ADC1_CH2, TOUCH3; ESP32-S3 strapping pin |
-| P2-5 | 10 | GPIO10 |  |  |  | ✓ | ✓ |  | ✓ |  |  | ADC1_CH9, TOUCH10, SPI_CS |
-| P2-6 | 11 | GPIO11 |  |  |  | ✓ | ✓ |  | ✓ |  |  | ADC2_CH0, TOUCH11, SPI_D |
-| P2-7 | 12 | GPIO12 |  |  |  | ✓ | ✓ |  | ✓ |  |  | ADC2_CH1, TOUCH12, SPI_CLK |
-| P2-8 | 13 | GPIO13 |  |  |  | ✓ | ✓ |  | ✓ |  |  | ADC2_CH2, TOUCH13, SPI_Q |
-| P2-9 | NC | - |  |  |  |  |  |  |  |  |  | Not connected |
-| P2-10 | NC | - |  |  |  |  |  |  |  |  |  | Not connected |
-| P2-11 | GND | - |  |  | ✓ |  |  |  |  |  |  | Ground |
-| P2-12 left bottom | +5V | - |  | ✓ |  |  |  |  |  |  |  | 5 V rail |
-| P1-1 right top | GND | - |  |  | ✓ |  |  |  |  |  |  | Ground |
-| P1-2 | GND | - |  |  | ✓ |  |  |  |  |  |  | Ground |
-| P1-3 | 43 | GPIO43 |  |  |  |  |  |  |  | ✓ | ✓ | UART0 TX / CLK_OUT1; used for serial when USB CDC is disabled |
-| P1-4 | 44 | GPIO44 |  |  |  |  |  |  |  | ✓ | ✓ | UART0 RX / CLK_OUT2; used for serial when USB CDC is disabled |
-| P1-5 | 18 | GPIO18 |  |  |  | ✓ |  |  |  | ✓ |  | ADC2_CH7, U1_RXD |
-| P1-6 | 17 | GPIO17 |  |  |  | ✓ |  |  |  | ✓ |  | ADC2_CH6, U1_TXD |
-| P1-7 | 21 | GPIO21 |  |  |  |  |  |  |  |  |  | Exposed GPIO |
-| P1-8 | 16 | GPIO16 |  |  |  | ✓ |  |  |  |  |  | ADC2_CH5 |
-| P1-9 | NC | - |  |  |  |  |  |  |  |  |  | Not connected |
-| P1-10 | GND | - |  |  | ✓ |  |  |  |  |  |  | Ground |
-| P1-11 | GND | - |  |  | ✓ |  |  |  |  |  |  | Ground |
-| P1-12 right bottom | 3V | - | ✓ |  |  |  |  |  |  |  |  | 3.3 V rail |
+| Phys | Lbl | GPIO | 3V3 | 5V | GND | ADC | Tch | Strap | SPI | UART | Clk |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| P2-1 | 3V | - | ✓ |  |  |  |  |  |  |  |  |
+| P2-2 | 1 | GPIO1 |  |  |  | ✓ | ✓ |  |  |  |  |
+| P2-3 | 2 | GPIO2 |  |  |  | ✓ | ✓ |  |  |  |  |
+| P2-4 | 3 | GPIO3 |  |  |  | ✓ | ✓ | ✓ |  |  |  |
+| P2-5 | 10 | GPIO10 |  |  |  | ✓ | ✓ |  | ✓ |  |  |
+| P2-6 | 11 | GPIO11 |  |  |  | ✓ | ✓ |  | ✓ |  |  |
+| P2-7 | 12 | GPIO12 |  |  |  | ✓ | ✓ |  | ✓ |  |  |
+| P2-8 | 13 | GPIO13 |  |  |  | ✓ | ✓ |  | ✓ |  |  |
+| P2-9 | NC | - |  |  |  |  |  |  |  |  |  |
+| P2-10 | NC | - |  |  |  |  |  |  |  |  |  |
+| P2-11 | GND | - |  |  | ✓ |  |  |  |  |  |  |
+| P2-12 | +5V | - |  | ✓ |  |  |  |  |  |  |  |
+| P1-1 | GND | - |  |  | ✓ |  |  |  |  |  |  |
+| P1-2 | GND | - |  |  | ✓ |  |  |  |  |  |  |
+| P1-3 | 43 | GPIO43 |  |  |  |  |  |  |  | ✓ | ✓ |
+| P1-4 | 44 | GPIO44 |  |  |  |  |  |  |  | ✓ | ✓ |
+| P1-5 | 18 | GPIO18 |  |  |  | ✓ |  |  |  | ✓ |  |
+| P1-6 | 17 | GPIO17 |  |  |  | ✓ |  |  |  | ✓ |  |
+| P1-7 | 21 | GPIO21 |  |  |  |  |  |  |  |  |  |
+| P1-8 | 16 | GPIO16 |  |  |  | ✓ |  |  |  |  |  |
+| P1-9 | NC | - |  |  |  |  |  |  |  |  |  |
+| P1-10 | GND | - |  |  | ✓ |  |  |  |  |  |  |
+| P1-11 | GND | - |  |  | ✓ |  |  |  |  |  |  |
+| P1-12 | 3V | - | ✓ |  |  |  |  |  |  |  |  |
+
+Cab external header details:
+
+- P2-2 `GPIO1`: ADC1_CH0, TOUCH1.
+- P2-3 `GPIO2`: ADC1_CH1, TOUCH2.
+- P2-4 `GPIO3`: ADC1_CH2, TOUCH3, ESP32-S3 strapping pin.
+- P2-5 `GPIO10`: ADC1_CH9, TOUCH10, SPI_CS.
+- P2-6 `GPIO11`: ADC2_CH0, TOUCH11, SPI_D.
+- P2-7 `GPIO12`: ADC2_CH1, TOUCH12, SPI_CLK.
+- P2-8 `GPIO13`: ADC2_CH2, TOUCH13, SPI_Q.
+- P1-3 `GPIO43`: UART0 TX / CLK_OUT1; used for serial when USB CDC is disabled.
+- P1-4 `GPIO44`: UART0 RX / CLK_OUT2; used for serial when USB CDC is disabled.
+- P1-5 `GPIO18`: ADC2_CH7, U1_RXD.
+- P1-6 `GPIO17`: ADC2_CH6, U1_TXD.
+- P1-8 `GPIO16`: ADC2_CH5.
 
 ### Cab Onboard Connections - LilyGO T-Display S3
 
 These GPIOs are already connected to board hardware. They should not be treated as free external GPIOs.
 
-| Physical / board function | GPIO | ADC | Strapping | Display | Button | Power / battery | LED / indicator | Notes |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| LCD power enable | GPIO15 |  |  | ✓ |  | ✓ | ✓ | Must be driven HIGH for display/backlight power when battery powered; also controls V3V output/indicator behavior |
-| LCD backlight | GPIO38 |  |  | ✓ |  |  |  | `LCD_BL` |
-| LCD D0 | GPIO39 |  |  | ✓ |  |  |  | Display data line |
-| LCD D1 | GPIO40 |  |  | ✓ |  |  |  | Display data line |
-| LCD D2 | GPIO41 |  |  | ✓ |  |  |  | Display data line |
-| LCD D3 | GPIO42 |  |  | ✓ |  |  |  | Display data line |
-| LCD D4 | GPIO45 |  | ✓ | ✓ |  |  |  | Display data line; ESP32-S3 strapping pin |
-| LCD D5 | GPIO46 |  | ✓ | ✓ |  |  |  | Display data line; ESP32-S3 strapping pin |
-| LCD D6 | GPIO47 |  |  | ✓ |  |  |  | Display data line |
-| LCD D7 | GPIO48 |  |  | ✓ |  |  |  | Display data line |
-| LCD WR | GPIO8 |  |  | ✓ |  |  |  | Display write control |
-| LCD RD | GPIO9 |  |  | ✓ |  |  |  | Display read control |
-| LCD DC | GPIO7 |  |  | ✓ |  |  |  | Display data/command |
-| LCD CS | GPIO6 |  |  | ✓ |  |  |  | Display chip select |
-| LCD reset | GPIO5 |  |  | ✓ |  |  |  | Display reset |
-| Battery voltage sense | GPIO4 | ✓ |  |  |  | ✓ |  | `LCD_BAT_VOLT`; ADC input through board circuitry |
-| BOOT button | GPIO0 |  | ✓ |  | ✓ |  |  | Download/boot button; ESP32-S3 boot strapping pin |
-| IO14 button | GPIO14 |  |  |  | ✓ |  |  | Second front button shown on LilyGO pin map as `IO14` |
-| Reset button | - |  |  |  | ✓ |  |  | Hardware reset, no GPIO assignment |
-| Charge LED | - |  |  |  |  |  | ✓ | Red charge indicator, not GPIO-controlled |
+| Function | GPIO | ADC | Strap | Display | Button | Pwr | LED |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| LCD power enable | GPIO15 |  |  | ✓ |  | ✓ | ✓ |
+| LCD backlight | GPIO38 |  |  | ✓ |  |  |  |
+| LCD D0 | GPIO39 |  |  | ✓ |  |  |  |
+| LCD D1 | GPIO40 |  |  | ✓ |  |  |  |
+| LCD D2 | GPIO41 |  |  | ✓ |  |  |  |
+| LCD D3 | GPIO42 |  |  | ✓ |  |  |  |
+| LCD D4 | GPIO45 |  | ✓ | ✓ |  |  |  |
+| LCD D5 | GPIO46 |  | ✓ | ✓ |  |  |  |
+| LCD D6 | GPIO47 |  |  | ✓ |  |  |  |
+| LCD D7 | GPIO48 |  |  | ✓ |  |  |  |
+| LCD WR | GPIO8 |  |  | ✓ |  |  |  |
+| LCD RD | GPIO9 |  |  | ✓ |  |  |  |
+| LCD DC | GPIO7 |  |  | ✓ |  |  |  |
+| LCD CS | GPIO6 |  |  | ✓ |  |  |  |
+| LCD reset | GPIO5 |  |  | ✓ |  |  |  |
+| Battery sense | GPIO4 | ✓ |  |  |  | ✓ |  |
+| BOOT button | GPIO0 |  | ✓ |  | ✓ |  |  |
+| IO14 button | GPIO14 |  |  |  | ✓ |  |  |
+| Reset button | - |  |  |  | ✓ |  |  |
+| Charge LED | - |  |  |  |  |  | ✓ |
+
+Cab onboard details:
+
+- `GPIO15`: must be driven HIGH for display/backlight power when battery powered; also controls V3V output/indicator behavior.
+- `GPIO45` and `GPIO46`: LCD data lines and ESP32-S3 strapping pins.
+- `GPIO4`: `LCD_BAT_VOLT`; ADC input through board circuitry.
+- `GPIO0`: BOOT/download button and ESP32-S3 boot strapping pin.
+- Reset button is hardware reset and has no GPIO assignment.
+- Charge LED is not GPIO-controlled.
 
 ### Canopy External Pins - TENSTAR ROBOT ESP32-C3 SuperMini Plus
 
 This is the red SuperMini Plus style board with external antenna connector and onboard RGB LED.
 
-| Physical pin | Board label | GPIO | 3V3 | 5V | GND | ADC | Strapping | Onboard LED | SPI | I2C | UART | JTAG | Notes |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 5V | - |  | ✓ |  |  |  |  |  |  |  |  | 5 V input |
-| 2 | GND | - |  |  | ✓ |  |  |  |  |  |  |  | Ground |
-| 3 | 3V3 | - | ✓ |  |  |  |  |  |  |  |  |  | 3.3 V output |
-| 4 | IO0 / A0 | GPIO0 |  |  |  | ✓ |  |  |  |  |  |  | ADC-capable GPIO |
-| 5 | IO1 / A1 | GPIO1 |  |  |  | ✓ |  |  |  |  |  |  | ADC-capable GPIO |
-| 6 | IO2 / A2 | GPIO2 |  |  |  | ✓ | ✓ |  |  |  |  |  | ESP32-C3 strapping pin |
-| 7 | IO3 / A3 | GPIO3 |  |  |  | ✓ |  |  |  |  |  |  | ADC-capable GPIO |
-| 8 | IO4 / A4 / SCK | GPIO4 |  |  |  | ✓ |  |  | ✓ |  |  | ✓ | ADC-capable; SPI SCK; JTAG MTMS caution |
-| 9 | IO5 / A5 / MISO | GPIO5 |  |  |  | ✓ |  |  | ✓ |  |  | ✓ | ADC-capable; SPI MISO; JTAG MTDI caution |
-| 10 | IO6 / MOSI | GPIO6 |  |  |  |  |  |  | ✓ |  |  | ✓ | SPI MOSI; JTAG MTCK caution |
-| 11 | IO7 / SS | GPIO7 |  |  |  |  |  |  | ✓ |  |  | ✓ | SPI SS; JTAG MTDO caution |
-| 12 | IO8 / SDA | GPIO8 |  |  |  |  | ✓ | ✓ |  | ✓ |  |  | Onboard RGB LED / `RGB_BUILTIN`; ESP32-C3 strapping pin |
-| 13 | IO9 / SCL | GPIO9 |  |  |  |  | ✓ |  |  | ✓ |  |  | ESP32-C3 boot-mode strapping pin |
-| 14 | IO10 / RX | GPIO10 |  |  |  |  |  |  |  |  | ✓ |  | Board-labeled RX |
-| 15 | IO21 / TX | GPIO21 |  |  |  |  |  |  |  |  | ✓ |  | UART0 TX |
-| 16 | IO20 / RX | GPIO20 |  |  |  |  |  |  |  |  | ✓ |  | UART0 RX |
+| Pin | Lbl | GPIO | 3V3 | 5V | GND | ADC | Strap | LED | SPI | I2C | UART | JTAG |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 5V | - |  | ✓ |  |  |  |  |  |  |  |  |
+| 2 | GND | - |  |  | ✓ |  |  |  |  |  |  |  |
+| 3 | 3V3 | - | ✓ |  |  |  |  |  |  |  |  |  |
+| 4 | IO0/A0 | GPIO0 |  |  |  | ✓ |  |  |  |  |  |  |
+| 5 | IO1/A1 | GPIO1 |  |  |  | ✓ |  |  |  |  |  |  |
+| 6 | IO2/A2 | GPIO2 |  |  |  | ✓ | ✓ |  |  |  |  |  |
+| 7 | IO3/A3 | GPIO3 |  |  |  | ✓ |  |  |  |  |  |  |
+| 8 | IO4/SCK | GPIO4 |  |  |  | ✓ |  |  | ✓ |  |  | ✓ |
+| 9 | IO5/MISO | GPIO5 |  |  |  | ✓ |  |  | ✓ |  |  | ✓ |
+| 10 | IO6/MOSI | GPIO6 |  |  |  |  |  |  | ✓ |  |  | ✓ |
+| 11 | IO7/SS | GPIO7 |  |  |  |  |  |  | ✓ |  |  | ✓ |
+| 12 | IO8/SDA | GPIO8 |  |  |  |  | ✓ | ✓ |  | ✓ |  |  |
+| 13 | IO9/SCL | GPIO9 |  |  |  |  | ✓ |  |  | ✓ |  |  |
+| 14 | IO10/RX | GPIO10 |  |  |  |  |  |  |  |  | ✓ |  |
+| 15 | IO21/TX | GPIO21 |  |  |  |  |  |  |  |  | ✓ |  |
+| 16 | IO20/RX | GPIO20 |  |  |  |  |  |  |  |  | ✓ |  |
+
+Canopy external pin details:
+
+- `GPIO0` to `GPIO3`: ADC-capable GPIOs.
+- `GPIO2`: ESP32-C3 strapping pin.
+- `GPIO4`: ADC-capable, SPI SCK, JTAG MTMS caution.
+- `GPIO5`: ADC-capable, SPI MISO, JTAG MTDI caution.
+- `GPIO6`: SPI MOSI, JTAG MTCK caution.
+- `GPIO7`: SPI SS, JTAG MTDO caution.
+- `GPIO8`: onboard RGB LED / `RGB_BUILTIN`, I2C SDA label, ESP32-C3 strapping pin.
+- `GPIO9`: I2C SCL label, ESP32-C3 boot-mode strapping pin.
+- `GPIO20` and `GPIO21`: UART0 RX/TX pins.
 
 ### Canopy Onboard Notes - TENSTAR ROBOT ESP32-C3 SuperMini Plus
 
-| Physical / board function | GPIO | Strapping | Onboard LED | Power / antenna | Notes |
-| --- | --- | --- | --- | --- | --- |
-| RGB LED | GPIO8 | ✓ | ✓ |  | Shared with IO8/SDA; do not also treat GPIO8 as an ordinary I2C/data pin if using the RGB LED |
-| Power LED | - |  | ✓ | ✓ | Power indicator, not GPIO-controlled |
-| External antenna connector | - |  |  | ✓ | External antenna connector is present; verify any onboard jumper/solder-link requirement before relying on the external antenna |
-| BOOT function | GPIO9 | ✓ |  |  | ESP32-C3 download/boot mode is controlled by GPIO9 being LOW at reset |
+| Function | GPIO | Strap | LED | Pwr |
+| --- | --- | --- | --- | --- |
+| RGB LED | GPIO8 | ✓ | ✓ |  |
+| Power LED | - |  | ✓ | ✓ |
+| External antenna connector | - |  |  | ✓ |
+| BOOT function | GPIO9 | ✓ |  |  |
+
+Canopy onboard details:
+
+- `GPIO8`: shared with IO8/SDA; do not treat GPIO8 as an ordinary I2C/data pin if using the onboard RGB LED.
+- Power LED is not GPIO-controlled.
+- External antenna connector is present; verify any onboard jumper/solder-link requirement before relying on the external antenna.
+- `GPIO9`: ESP32-C3 download/boot mode is controlled by GPIO9 being LOW at reset.
 
 ## Build
 
