@@ -32,9 +32,16 @@ def js_string(text):
     return f'"{escaped}"'
 
 
-def sound_names():
+def sound_definitions():
     text = TONES_HEADER.read_text(encoding="utf-8")
-    names = []
+    step_arrays = {}
+    for match in re.finditer(r"static constexpr ToneStep (\w+)\[\] = \{(.*?)\};", text, re.S):
+        steps = []
+        for step in re.finditer(r"\{\s*(\d+)\s*,\s*(\d+)\s*\}", match.group(2)):
+            steps.append((int(step.group(1)), int(step.group(2))))
+        step_arrays[match.group(1)] = steps
+
+    sounds = []
     in_table = False
     for line in text.splitlines():
         if "kToneSounds[]" in line:
@@ -44,18 +51,27 @@ def sound_names():
             break
         if not in_table:
             continue
-        match = re.search(r'\{\s*\d+\s*,\s*"([^"]+)"', line)
+        match = re.search(r'\{\s*\d+\s*,\s*"([^"]+)"\s*,\s*(?:true|false)\s*,\s*(\w+)', line)
         if match and match.group(1) != "None":
-            names.append(match.group(1))
-    return names
+            sounds.append({"name": match.group(1), "steps": step_arrays.get(match.group(2), [])})
+    return sounds
+
+
+def js_steps(steps):
+    return "[" + ", ".join(f"[{frequency},{duration}]" for frequency, duration in steps) + "]"
 
 
 def inject_sound_options(filename, text, sounds):
     if filename != "config_can.html":
         return text
-    options = ["None"] + sounds
+    names = [sound["name"] for sound in sounds]
+    options = ["None"] + names
     replacement = "soundOptions: [" + ", ".join(js_string(name) for name in options) + "],"
-    return text.replace('soundOptions: ["None"],', replacement)
+    tones = "const demoTones = {\n"
+    for sound in sounds:
+        tones += f"      {js_string(sound['name'])}: {js_steps(sound['steps'])},\n"
+    tones += "    };"
+    return text.replace('soundOptions: ["None"],', replacement).replace("const demoTones = {};", tones)
 
 
 def main():
@@ -69,7 +85,7 @@ def main():
         "",
     ]
 
-    sounds = sound_names()
+    sounds = sound_definitions()
 
     for filename, symbol in ASSETS:
         source = WEB / filename
@@ -80,8 +96,8 @@ def main():
 
     header.append(f"static constexpr size_t kSoundAssetCount = {len(sounds)};")
     header.append("static constexpr const char *kSoundAssets[] = {")
-    for name in sounds:
-        header.append(f"  {cpp_string(name)},")
+    for sound in sounds:
+        header.append(f"  {cpp_string(sound['name'])},")
     header.append("};")
     header.append("")
 

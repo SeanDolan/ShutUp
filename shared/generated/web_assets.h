@@ -284,6 +284,33 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
         { name: "Door alarm", cab: "None", canopy: "None", repeat: false, delay: 0 }
       ]
     };
+    const demoTones = {
+      "PowerUp": [[800,80], [1000,80], [1300,120]],
+      "PowerDown": [[1200,100], [900,100], [600,140]],
+      "PewPew": [[1800,60], [0,40], [2000,60]],
+      "Pulse": [[1200,120]],
+      "Confirm": [[1100,70], [0,40], [1400,90]],
+      "Error": [[400,160], [0,60], [1000,60]],
+      "SaveOK": [[900,60], [0,40], [1200,80]],
+      "Restarting": [[1000,120], [800,120], [600,180]],
+      "ConnectWiFi": [[1400,60], [1600,60], [1800,80]],
+      "LostWiFi": [[900,120], [600,160]],
+      "SearchingLoop": [[1600,60], [0,300]],
+      "AlarmFast": [[1500,80], [0,40], [1500,80], [0,40], [1500,80]],
+      "AlarmSlow": [[700,400], [0,300]],
+      "MuteOn": [[500,70], [0,40], [500,70]],
+      "MuteOff": [[1000,70], [0,40], [1000,70]],
+      "DoorOpenWarn": [[800,70], [1200,90], [800,70]],
+      "DoorFault": [[400,200], [0,100]],
+      "Click1": [[2000,40]],
+      "Click2": [[2200,40], [0,40], [2200,40]],
+      "SuccessHappy": [[1000,60], [1400,60], [1800,100]],
+      "WarningBeep": [[800,200]],
+      "ChargingUp": [[700,60], [900,60], [1100,60], [1400,80]],
+      "ChargingDown": [[1400,60], [1100,60], [900,60], [700,80]],
+      "Notify": [[1300,120]],
+      "BossFight": [[1800,70], [800,90], [2000,120]],
+    };
 
     const $ = (id) => document.getElementById(id);
 
@@ -425,8 +452,49 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
 
     async function demoSound(index) {
       const body = new URLSearchParams();
-      body.set("sound", $(`action${index}Canopy`).value);
-      try { await api("/api/sound/demo", { method: "POST", body }); } catch {}
+      const sound = $(`action${index}Canopy`).value;
+      body.set("sound", sound);
+      try { await api("/api/sound/demo", { method: "POST", body }); }
+      catch { playTonePreview(sound); }
+    }
+
+    let previewAudio = null;
+    let previewOscillators = [];
+
+    function stopTonePreview() {
+      previewOscillators.forEach((oscillator) => {
+        try { oscillator.stop(); } catch {}
+      });
+      previewOscillators = [];
+    }
+
+    function playTonePreview(name) {
+      const steps = demoTones[name];
+      if (!steps || !steps.length) return;
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      if (!previewAudio) previewAudio = new AudioContext();
+      previewAudio.resume();
+      stopTonePreview();
+
+      let when = previewAudio.currentTime + 0.03;
+      steps.forEach((step) => {
+        const frequency = Number(step[0]);
+        const duration = Math.max(0.001, Number(step[1]) / 1000);
+        if (frequency > 0) {
+          const oscillator = previewAudio.createOscillator();
+          const gain = previewAudio.createGain();
+          oscillator.type = "square";
+          oscillator.frequency.setValueAtTime(frequency, when);
+          gain.gain.setValueAtTime(0.08, when);
+          gain.gain.setTargetAtTime(0, when + Math.max(0, duration - 0.02), 0.01);
+          oscillator.connect(gain).connect(previewAudio.destination);
+          oscillator.start(when);
+          oscillator.stop(when + duration);
+          previewOscillators.push(oscillator);
+        }
+        when += duration;
+      });
     }
 
     $("saveBtn").addEventListener("click", saveConfig);
