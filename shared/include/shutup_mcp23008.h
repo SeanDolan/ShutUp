@@ -13,7 +13,7 @@ public:
     wire_ = &wire;
     address_ = address;
     writeRegister(0x00, 0x3F);  // GPA0-GPA5 inputs, GPA6-GPA7 unused outputs.
-    writeRegister(0x06, 0x3F);  // Pull-ups for GPA0-GPA5 switch-to-ground inputs.
+    writeRegister(0x06, 0x3F);  // Pull-ups for normally open switch-to-ground inputs.
   }
 
   void readDoorStates(uint8_t enabledMask, DoorState states[kDoorCount]) {
@@ -29,7 +29,7 @@ public:
       if ((enabledMask & bit) == 0) {
         states[i] = DoorState::Disabled;
       } else {
-        states[i] = (gpio & bit) == 0 ? DoorState::Open : DoorState::Closed;
+        states[i] = (gpio & bit) == 0 ? DoorState::Closed : DoorState::Open;
       }
     }
   }

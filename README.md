@@ -101,8 +101,8 @@ MCP23008 wiring summary:
 - MCP23008 address is currently `0x20`; A0, A1, and A2 are tied low.
 - Door sensor 1-6 currently map to MCP23008 GPA0-GPA5 in order.
 - The current firmware records physical door state only: `open`, `closed`, or `disabled`.
-- The current firmware maps LOW to physical door `open` and HIGH to physical door `closed`.
-- The cable-fault-safe reed-switch topology is not PCB-final yet and must be resolved before fabrication.
+- The current firmware maps LOW to physical door `closed` and HIGH to physical door `open`.
+- With normally open reed switches wired from MCP23008 input to GND, a cable break reads the same as physical door `open`.
 
 ## Config Page Demos
 
@@ -170,8 +170,8 @@ Hardware:
   - Includes 23 mm speaker, 2 W amplifier, and volume trimpot.
   - Jaycar notes the volume should be adjusted to minimum before use to avoid speaker damage.
   - Jaycar notes this module has an onboard digital-to-analogue controller and is driven from a digital pin/library.
-- MCP23008 GPIO expander for normally closed reed-switch inputs.
-- Up to 6 normally closed reed switches for monitored doors.
+- MCP23008 GPIO expander for normally open reed-switch inputs.
+- Up to 6 normally open reed switches for monitored doors.
 
 Config behavior:
 

@@ -1,6 +1,6 @@
 # ShutUp Wiring Specification
 
-This document is the working wiring reference for the current firmware and hardware plan. Do not treat the MCP23008 door-input section as PCB-final until the cable-fault behavior is resolved.
+This document is the working wiring reference for the current firmware and hardware plan.
 
 ## Shared Rules
 
@@ -92,20 +92,21 @@ Current MCP23008 firmware behavior:
 - GPA0-GPA5 are configured as inputs.
 - Internal MCP23008 pull-ups are enabled on GPA0-GPA5.
 - The firmware records only physical door state: `open`, `closed`, or `disabled`.
-- A LOW read on GPA0-GPA5 is currently recorded as physical door `open`.
-- A HIGH read on GPA0-GPA5 is currently recorded as physical door `closed`.
+- A LOW read on GPA0-GPA5 is recorded as physical door `closed`.
+- A HIGH read on GPA0-GPA5 is recorded as physical door `open`.
 - If the MCP23008 cannot be read over I2C, every enabled door is recorded as physical door `open`.
 
-Current passive reed-switch wiring implied by the firmware:
+Normally open reed-switch wiring:
 
 | Reed wire | Connects to |
 | --- | --- |
 | One side | MCP23008 GPA input |
 | Other side | GND |
 
-Critical PCB decision:
+Door-state results:
 
-- With the current passive switch-to-ground wiring and current firmware mapping, an open-circuit cable fault reads the same as a physical door `closed`.
-- This does not satisfy the intended safety behavior where a broken cable should alert as physical door `open`.
-- Before PCB fabrication, the final reed-switch wiring and firmware mapping must be resolved together so the healthy closed-door state and the cable-fault state cannot be confused.
-
+| Physical state | Reed contact | MCP input | Firmware door state |
+| --- | --- | --- | --- |
+| Door closed | Closed to GND | LOW | `closed` |
+| Door open | Open circuit | HIGH | `open` |
+| Cable break | Open circuit | HIGH | `open` |
