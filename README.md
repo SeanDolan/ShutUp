@@ -62,7 +62,7 @@ Project GPIO assignments are listed in the selected pin assignments section belo
 - Canopy drives the 8 WS2812S LEDs as power, connectivity, and six door state indicators.
 - Canopy config includes the action sound table for Startup, Connectivity success, Connectivity error, Doors ok, and Door alarm.
 - In the action sound table, `Repeat` is an on/off checkbox and `Delay` is the delay between repeats.
-- Sound dropdowns are generated from `.mp3` filenames in `Cab/data/sounds/` and `Canopy/data/sounds/`; file extensions are not shown.
+- Sound dropdowns are generated from the shared tone library in `shared/include/shutup_tones.h`.
 - Cab placeholder images are stored in `Cab/data/images/` as `startup.png`, `connecting.png`, and `background.png`.
 - Canopy config owns the Cab door overlay rectangle settings and syncs them to the Cab over ESP-NOW.
 
@@ -118,12 +118,9 @@ Run this after editing files in `shared/web/`:
 
 PlatformIO also runs the generator before each device build.
 
-The generator also scans device sound folders for `.mp3` filenames and exposes those names to the config page dropdowns:
+The generator also scans `shared/include/shutup_tones.h` and exposes the named tone sounds to the config page dropdowns.
 
-- `Cab/data/sounds/`
-- `Canopy/data/sounds/`
-
-The current speaker implementation stores and syncs selected MP3 names, but MP3 decoding/output to the XC3744 signal pin is not implemented yet.
+The current speaker implementation stores and syncs selected tone names and plays them as non-blocking square-wave tone sequences on the XC3744 signal pin.
 
 ## Hardware Requirements
 

@@ -275,7 +275,7 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
         { name: "Door #5", width: 0, height: 0, x: 0, y: 0, closed: "#00FF00", open: "#FF0000" },
         { name: "Door #6", width: 0, height: 0, x: 0, y: 0, closed: "#00FF00", open: "#FF0000" }
       ],
-      soundOptions: ["None"],
+      soundOptions: ["None", "PowerUp", "PowerDown", "PewPew", "Pulse", "Confirm", "Error", "SaveOK", "Restarting", "ConnectWiFi", "LostWiFi", "SearchingLoop", "AlarmFast", "AlarmSlow", "MuteOn", "MuteOff", "DoorOpenWarn", "DoorFault", "Click1", "Click2", "SuccessHappy", "WarningBeep", "ChargingUp", "ChargingDown", "Notify", "BossFight"],
       soundActions: [
         { name: "Startup", cab: "None", canopy: "None", repeat: false, delay: 0 },
         { name: "Connectivity success", cab: "None", canopy: "None", repeat: false, delay: 0 },
@@ -439,8 +439,33 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
 </html>
 )SHUTUP_HTML";
 
-static constexpr size_t kSoundAssetCount = 0;
+static constexpr size_t kSoundAssetCount = 25;
 static constexpr const char *kSoundAssets[] = {
+  "PowerUp",
+  "PowerDown",
+  "PewPew",
+  "Pulse",
+  "Confirm",
+  "Error",
+  "SaveOK",
+  "Restarting",
+  "ConnectWiFi",
+  "LostWiFi",
+  "SearchingLoop",
+  "AlarmFast",
+  "AlarmSlow",
+  "MuteOn",
+  "MuteOff",
+  "DoorOpenWarn",
+  "DoorFault",
+  "Click1",
+  "Click2",
+  "SuccessHappy",
+  "WarningBeep",
+  "ChargingUp",
+  "ChargingDown",
+  "Notify",
+  "BossFight",
 };
 
 }  // namespace shutup

@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 try:
@@ -8,10 +9,7 @@ except NameError:
 WEB = ROOT / "shared" / "web"
 GENERATED = ROOT / "shared" / "generated"
 DEMO = ROOT / "demo"
-SOUND_DIRS = [
-    ROOT / "Cab" / "data" / "sounds",
-    ROOT / "Canopy" / "data" / "sounds",
-]
+TONES_HEADER = ROOT / "shared" / "include" / "shutup_tones.h"
 
 ASSETS = [
     ("config_cab.html", "kConfigCabHtml"),
@@ -29,14 +27,35 @@ def cpp_string(text):
     return f'"{escaped}"'
 
 
+def js_string(text):
+    escaped = text.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
+
+
 def sound_names():
-    names = set()
-    for sound_dir in SOUND_DIRS:
-        if not sound_dir.exists():
+    text = TONES_HEADER.read_text(encoding="utf-8")
+    names = []
+    in_table = False
+    for line in text.splitlines():
+        if "kToneSounds[]" in line:
+            in_table = True
             continue
-        for path in sound_dir.glob("*.mp3"):
-            names.add(path.stem)
-    return sorted(names, key=str.casefold)
+        if in_table and line.strip().startswith("};"):
+            break
+        if not in_table:
+            continue
+        match = re.search(r'\{\s*\d+\s*,\s*"([^"]+)"', line)
+        if match and match.group(1) != "None":
+            names.append(match.group(1))
+    return names
+
+
+def inject_sound_options(filename, text, sounds):
+    if filename != "config_can.html":
+        return text
+    options = ["None"] + sounds
+    replacement = "soundOptions: [" + ", ".join(js_string(name) for name in options) + "],"
+    return text.replace('soundOptions: ["None"],', replacement)
 
 
 def main():
@@ -50,14 +69,15 @@ def main():
         "",
     ]
 
+    sounds = sound_names()
+
     for filename, symbol in ASSETS:
         source = WEB / filename
-        text = source.read_text(encoding="utf-8")
+        text = inject_sound_options(filename, source.read_text(encoding="utf-8"), sounds)
         (DEMO / filename).write_text(text, encoding="utf-8", newline="\n")
         header.append(f"static constexpr const char {symbol}[] = {cpp_raw_string(text)};")
         header.append("")
 
-    sounds = sound_names()
     header.append(f"static constexpr size_t kSoundAssetCount = {len(sounds)};")
     header.append("static constexpr const char *kSoundAssets[] = {")
     for name in sounds:

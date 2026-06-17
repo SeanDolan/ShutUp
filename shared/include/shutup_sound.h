@@ -3,6 +3,7 @@
 #include <Arduino.h>
 
 #include "shutup_settings.h"
+#include "shutup_tones.h"
 
 namespace shutup {
 
@@ -13,7 +14,7 @@ public:
     role_ = role;
     settings_ = &settings;
     pinMode(speakerPin_, OUTPUT);
-    digitalWrite(speakerPin_, LOW);
+    stopTone();
   }
 
   void trigger(SoundAction action) {
@@ -29,8 +30,11 @@ public:
     activeSound_ = sound;
     repeat_ = config.repeat;
     repeatDelayMs_ = config.delayMs;
-    nextPlayMs_ = millis();
+    nextPlayMs_ = 0;
     active_ = true;
+    if (!startSound(sound)) {
+      active_ = false;
+    }
   }
 
   void playNow(const String &sound) {
@@ -38,40 +42,101 @@ public:
     if (sound == kNoSoundName) {
       return;
     }
-    playConfiguredSound(sound);
+    startSound(sound);
   }
 
   void stop() {
     active_ = false;
     activeSound_ = kNoSoundName;
-    noTone(speakerPin_);
-    digitalWrite(speakerPin_, LOW);
+    stopTone();
+    currentSound_ = nullptr;
+    stepIndex_ = 0;
+    stepEndMs_ = 0;
   }
 
   void loop() {
+    updateSequence();
     if (!active_) {
+      return;
+    }
+    if (currentSound_) {
       return;
     }
     const uint32_t now = millis();
     if (static_cast<int32_t>(now - nextPlayMs_) < 0) {
       return;
     }
-    playConfiguredSound(activeSound_);
-    if (!repeat_) {
+    if (!startSound(activeSound_)) {
       active_ = false;
       return;
     }
-    nextPlayMs_ = now + repeatDelayMs_;
+    if (!repeat_) {
+      nextPlayMs_ = 0;
+      return;
+    }
+    nextPlayMs_ = 0;
   }
 
 private:
-  void playConfiguredSound(const String &sound) {
+  bool startSound(const String &sound) {
     if (sound == kNoSoundName) {
+      return false;
+    }
+    const ToneSound *toneSound = findToneSoundByName(sound);
+    if (!toneSound || toneSound->stepCount == 0) {
+      stopTone();
+      return false;
+    }
+    currentSound_ = toneSound;
+    stepIndex_ = 0;
+    playCurrentStep();
+    return true;
+  }
+
+  void updateSequence() {
+    if (!currentSound_) {
       return;
     }
-    // File-backed sounds are intentionally not decoded yet. The name is kept so
-    // the config contract is ready once the sound file format is agreed.
-    tone(speakerPin_, 1200, 180);
+    const uint32_t now = millis();
+    if (static_cast<int32_t>(now - stepEndMs_) < 0) {
+      return;
+    }
+    ++stepIndex_;
+    if (stepIndex_ < currentSound_->stepCount) {
+      playCurrentStep();
+      return;
+    }
+    stopTone();
+    currentSound_ = nullptr;
+    stepIndex_ = 0;
+    stepEndMs_ = 0;
+    if (active_ && repeat_) {
+      nextPlayMs_ = now + repeatDelayMs_;
+    } else {
+      active_ = false;
+    }
+  }
+
+  void playCurrentStep() {
+    if (!currentSound_ || stepIndex_ >= currentSound_->stepCount) {
+      stopTone();
+      return;
+    }
+    const ToneStep &step = currentSound_->steps[stepIndex_];
+    if (step.frequencyHz == 0) {
+      stopTone();
+    } else {
+      tone(speakerPin_, step.frequencyHz);
+    }
+    stepEndMs_ = millis() + step.durationMs;
+  }
+
+  void stopTone() {
+    if (speakerPin_ < 0) {
+      return;
+    }
+    noTone(speakerPin_);
+    digitalWrite(speakerPin_, LOW);
   }
 
   int speakerPin_{-1};
@@ -82,6 +147,9 @@ private:
   bool repeat_{false};
   uint32_t repeatDelayMs_{0};
   uint32_t nextPlayMs_{0};
+  const ToneSound *currentSound_{nullptr};
+  uint8_t stepIndex_{0};
+  uint32_t stepEndMs_{0};
 };
 
 }  // namespace shutup
