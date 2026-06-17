@@ -61,6 +61,7 @@ Project GPIO assignments are listed in the selected pin assignments section belo
 - Canopy reads physical door state through MCP23008 GPA0-GPA5 and reports enabled door states over ESP-NOW.
 - Canopy drives the 8 WS2812S LEDs as power, connectivity, and six door state indicators.
 - Canopy config includes the action sound table for Startup, Connectivity success, Connectivity error, Doors ok, and Door alarm.
+- In the action sound table, `Repeat` is an on/off checkbox and `Delay` is the delay between repeats.
 
 ## Selected Pin Assignments
 

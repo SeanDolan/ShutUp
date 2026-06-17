@@ -59,7 +59,7 @@ inline const char *soundActionName(uint8_t index) {
 struct SoundActionConfig {
   String cabSound{kNoSoundName};
   String canopySound{kNoSoundName};
-  uint32_t repeatMs{0};
+  bool repeat{false};
   uint32_t delayMs{0};
 };
 
@@ -105,7 +105,7 @@ public:
     for (uint8_t i = 0; i < kSoundActionCount; ++i) {
       soundActions_[i].cabSound = prefs_.getString(soundKey(i, "cab").c_str(), kNoSoundName);
       soundActions_[i].canopySound = prefs_.getString(soundKey(i, "can").c_str(), kNoSoundName);
-      soundActions_[i].repeatMs = prefs_.getUInt(soundKey(i, "rep").c_str(), 0);
+      soundActions_[i].repeat = prefs_.getBool(soundKey(i, "rep").c_str(), false);
       soundActions_[i].delayMs = prefs_.getUInt(soundKey(i, "del").c_str(), 0);
     }
   }
@@ -169,17 +169,17 @@ public:
   }
 
   void setSoundAction(uint8_t index, const String &cabSound, const String &canopySound,
-                      uint32_t repeatMs, uint32_t delayMs) {
+                      bool repeat, uint32_t delayMs) {
     if (index >= kSoundActionCount) {
       return;
     }
     soundActions_[index].cabSound = cleanSoundName(cabSound);
     soundActions_[index].canopySound = cleanSoundName(canopySound);
-    soundActions_[index].repeatMs = repeatMs;
+    soundActions_[index].repeat = repeat;
     soundActions_[index].delayMs = delayMs;
     prefs_.putString(soundKey(index, "cab").c_str(), soundActions_[index].cabSound);
     prefs_.putString(soundKey(index, "can").c_str(), soundActions_[index].canopySound);
-    prefs_.putUInt(soundKey(index, "rep").c_str(), soundActions_[index].repeatMs);
+    prefs_.putBool(soundKey(index, "rep").c_str(), soundActions_[index].repeat);
     prefs_.putUInt(soundKey(index, "del").c_str(), soundActions_[index].delayMs);
   }
 

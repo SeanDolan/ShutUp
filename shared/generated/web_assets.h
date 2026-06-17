@@ -155,11 +155,18 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
     .door label { display: flex; gap: 8px; align-items: center; margin: 0; }
     .ok { color: var(--good); font-weight: 700; }
     .warn { color: var(--warn); font-weight: 700; }
-    .sound-table { width: 100%; border-collapse: collapse; }
+    .sound-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
     .sound-table th, .sound-table td { border-bottom: 1px solid var(--line); padding: 8px; text-align: left; vertical-align: middle; }
     .sound-table th { background: var(--panel); }
-    .sound-table td:first-child { font-weight: 700; min-width: 150px; }
-    .sound-table button { width: 100%; }
+    .sound-table td:first-child { font-weight: 700; }
+    .sound-table .action-col { width: 150px; }
+    .sound-table .sound-col { width: auto; }
+    .sound-table .repeat-col { width: 72px; text-align: center; }
+    .sound-table .delay-col { width: 96px; }
+    .sound-table .demo-col { width: 76px; }
+    .repeat-cell { text-align: center; }
+    .repeat-cell input { width: auto; }
+    .sound-table button { width: 100%; padding-left: 8px; padding-right: 8px; }
   </style>
 </head>
 <body>
@@ -188,12 +195,12 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
       <table class="sound-table">
         <thead>
           <tr>
-            <th>Action</th>
-            <th>Cab</th>
-            <th>Canopy</th>
-            <th>Repeat</th>
-            <th>Delay</th>
-            <th>Demo</th>
+            <th class="action-col">Action</th>
+            <th class="sound-col">Cab</th>
+            <th class="sound-col">Canopy</th>
+            <th class="repeat-col">Repeat</th>
+            <th class="delay-col">Delay</th>
+            <th class="demo-col">Demo</th>
           </tr>
         </thead>
         <tbody id="soundRows"></tbody>
@@ -233,11 +240,11 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
       doorEnabledMask: 0b00111111,
       soundOptions: ["None"],
       soundActions: [
-        { name: "Startup", cab: "None", canopy: "None", repeat: 0, delay: 0 },
-        { name: "Connectivity success", cab: "None", canopy: "None", repeat: 0, delay: 0 },
-        { name: "Connectivity error", cab: "None", canopy: "None", repeat: 0, delay: 0 },
-        { name: "Doors ok", cab: "None", canopy: "None", repeat: 0, delay: 0 },
-        { name: "Door alarm", cab: "None", canopy: "None", repeat: 0, delay: 0 }
+        { name: "Startup", cab: "None", canopy: "None", repeat: false, delay: 0 },
+        { name: "Connectivity success", cab: "None", canopy: "None", repeat: false, delay: 0 },
+        { name: "Connectivity error", cab: "None", canopy: "None", repeat: false, delay: 0 },
+        { name: "Doors ok", cab: "None", canopy: "None", repeat: false, delay: 0 },
+        { name: "Door alarm", cab: "None", canopy: "None", repeat: false, delay: 0 }
       ]
     };
 
@@ -274,7 +281,7 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
           <td>${action.name}</td>
           <td><select id="action${index}Cab">${soundOptionsHtml(options, action.cab || "None")}</select></td>
           <td><select id="action${index}Canopy">${soundOptionsHtml(options, action.canopy || "None")}</select></td>
-          <td><input id="action${index}Repeat" type="number" min="0" step="100" value="${action.repeat || 0}"></td>
+          <td class="repeat-cell"><input id="action${index}Repeat" type="checkbox" ${action.repeat ? "checked" : ""}></td>
           <td><input id="action${index}Delay" type="number" min="0" step="100" value="${action.delay || 0}"></td>
           <td><button type="button" data-demo="${index}">Play</button></td>
         </tr>`).join("");
@@ -297,7 +304,7 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
       for (let i = 0; i < demoConfig.soundActions.length; i++) {
         body.set(`action${i}Cab`, $(`action${i}Cab`).value);
         body.set(`action${i}Canopy`, $(`action${i}Canopy`).value);
-        body.set(`action${i}Repeat`, $(`action${i}Repeat`).value);
+        if ($(`action${i}Repeat`).checked) body.set(`action${i}Repeat`, "on");
         body.set(`action${i}Delay`, $(`action${i}Delay`).value);
       }
       try { render(await api("/api/config", { method: "POST", body })); }

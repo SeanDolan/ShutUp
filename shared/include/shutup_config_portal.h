@@ -90,7 +90,7 @@ private:
             i,
             server_.arg(prefix + "Cab"),
             server_.arg(prefix + "Canopy"),
-            parseUIntArg(prefix + "Repeat"),
+            server_.hasArg(prefix + "Repeat"),
             parseUIntArg(prefix + "Delay"));
       }
     }
@@ -142,7 +142,7 @@ private:
       json += "\"name\":\"" + String(soundActionName(i)) + "\",";
       json += "\"cab\":\"" + escapeJson(action.cabSound) + "\",";
       json += "\"canopy\":\"" + escapeJson(action.canopySound) + "\",";
-      json += "\"repeat\":" + String(action.repeatMs) + ",";
+      json += "\"repeat\":" + String(action.repeat ? "true" : "false") + ",";
       json += "\"delay\":" + String(action.delayMs);
       json += "}";
     }

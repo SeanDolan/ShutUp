@@ -27,9 +27,9 @@ public:
       return;
     }
     activeSound_ = sound;
-    repeatMs_ = config.repeatMs;
-    delayMs_ = config.delayMs;
-    nextPlayMs_ = millis() + delayMs_;
+    repeat_ = config.repeat;
+    repeatDelayMs_ = config.delayMs;
+    nextPlayMs_ = millis();
     active_ = true;
   }
 
@@ -57,11 +57,11 @@ public:
       return;
     }
     playConfiguredSound(activeSound_);
-    if (repeatMs_ == 0) {
+    if (!repeat_) {
       active_ = false;
       return;
     }
-    nextPlayMs_ = now + repeatMs_;
+    nextPlayMs_ = now + repeatDelayMs_;
   }
 
 private:
@@ -79,8 +79,8 @@ private:
   SettingsStore *settings_{nullptr};
   bool active_{false};
   String activeSound_{kNoSoundName};
-  uint32_t repeatMs_{0};
-  uint32_t delayMs_{0};
+  bool repeat_{false};
+  uint32_t repeatDelayMs_{0};
   uint32_t nextPlayMs_{0};
 };
 

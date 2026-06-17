@@ -31,8 +31,8 @@ struct ShutupPacket {
   uint8_t reserved0;
   char name[24];
   uint8_t configIndex;
-  uint8_t reserved[3];
-  uint32_t repeatMs;
+  uint8_t repeat;
+  uint8_t reserved[2];
   uint32_t delayMs;
   char cabSound[24];
   char canopySound[24];
@@ -184,7 +184,7 @@ private:
       return;
     }
     if (type == PacketType::ConfigSync && role_ == DeviceRole::Cab && packet.configIndex < kSoundActionCount) {
-      settings_->setSoundAction(packet.configIndex, packet.cabSound, packet.canopySound, packet.repeatMs, packet.delayMs);
+      settings_->setSoundAction(packet.configIndex, packet.cabSound, packet.canopySound, packet.repeat != 0, packet.delayMs);
       return;
     }
   }
@@ -266,7 +266,7 @@ private:
     fillPacket(packet, PacketType::ConfigSync);
     const SoundActionConfig &action = settings_->soundAction(index);
     packet.configIndex = index;
-    packet.repeatMs = action.repeatMs;
+    packet.repeat = action.repeat ? 1 : 0;
     packet.delayMs = action.delayMs;
     strlcpy(packet.cabSound, action.cabSound.c_str(), sizeof(packet.cabSound));
     strlcpy(packet.canopySound, action.canopySound.c_str(), sizeof(packet.canopySound));
