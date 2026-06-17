@@ -8,6 +8,10 @@ except NameError:
 WEB = ROOT / "shared" / "web"
 GENERATED = ROOT / "shared" / "generated"
 DEMO = ROOT / "demo"
+SOUND_DIRS = [
+    ROOT / "Cab" / "data" / "sounds",
+    ROOT / "Canopy" / "data" / "sounds",
+]
 
 ASSETS = [
     ("config_cab.html", "kConfigCabHtml"),
@@ -18,6 +22,21 @@ ASSETS = [
 def cpp_raw_string(text):
     marker = "SHUTUP_HTML"
     return f'R"{marker}({text}){marker}"'
+
+
+def cpp_string(text):
+    escaped = text.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
+
+
+def sound_names():
+    names = set()
+    for sound_dir in SOUND_DIRS:
+        if not sound_dir.exists():
+            continue
+        for path in sound_dir.glob("*.mp3"):
+            names.add(path.stem)
+    return sorted(names, key=str.casefold)
 
 
 def main():
@@ -37,6 +56,14 @@ def main():
         (DEMO / filename).write_text(text, encoding="utf-8", newline="\n")
         header.append(f"static constexpr const char {symbol}[] = {cpp_raw_string(text)};")
         header.append("")
+
+    sounds = sound_names()
+    header.append(f"static constexpr size_t kSoundAssetCount = {len(sounds)};")
+    header.append("static constexpr const char *kSoundAssets[] = {")
+    for name in sounds:
+        header.append(f"  {cpp_string(name)},")
+    header.append("};")
+    header.append("")
 
     header.append("}  // namespace shutup")
     (GENERATED / "web_assets.h").write_text("\n".join(header), encoding="utf-8", newline="\n")

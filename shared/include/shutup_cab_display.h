@@ -36,7 +36,7 @@ public:
     drawCenteredText("STARTING", 94, 2, kWhite);
   }
 
-  void showNormal(const DoorState states[kDoorCount], bool linkFresh, uint8_t heartbeatPercent,
+  void showNormal(const DoorState states[kDoorCount], const SettingsStore &settings, bool linkFresh, uint8_t heartbeatPercent,
                   uint16_t averageHeartbeatMs) {
     fillScreen(kBlack);
     drawText(8, 8, "SHUTUP", 2, kWhite);
@@ -49,14 +49,19 @@ public:
     drawText(258, 38, "MS", 1, kWhite);
 
     for (uint8_t i = 0; i < kDoorCount; ++i) {
-      const int x = 18 + (i % 3) * 98;
-      const int y = 62 + (i / 3) * 50;
+      const DoorOverlayConfig &overlay = settings.doorOverlay(i);
+      const bool configured = overlay.width > 0 && overlay.height > 0;
+      const int x = configured ? overlay.x : 18 + (i % 3) * 98;
+      const int y = configured ? overlay.y : 62 + (i / 3) * 50;
+      const int width = configured ? overlay.width : 78;
+      const int height = configured ? overlay.height : 32;
       const bool enabled = states[i] != DoorState::Disabled;
       const bool doorOpen = states[i] == DoorState::Open;
-      const uint16_t color = !enabled ? kDim : (doorOpen ? kRed : kGreen);
-      fillRect(x, y, 78, 32, color);
-      drawText(x + 8, y + 9, !enabled ? "OFF" : (doorOpen ? "OPEN" : "OK"), 1, kBlack);
-      drawNumber(x + 58, y + 9, i + 1, 1, kBlack);
+      const uint16_t color = !enabled ? kDim : rgb565(doorOpen ? overlay.openColor : overlay.closedColor);
+      fillRect(x, y, width, height, color);
+      if (!configured || width >= 42) {
+        drawText(x + 4, y + 4, !enabled ? "OFF" : (doorOpen ? "OPEN" : "OK"), 1, kBlack);
+      }
     }
   }
 
@@ -70,6 +75,13 @@ private:
   static constexpr uint16_t kBlue = 0x001F;
   static constexpr uint16_t kOrange = 0xFD20;
   static constexpr uint16_t kDim = 0x39E7;
+
+  static uint16_t rgb565(uint32_t color) {
+    const uint8_t r = static_cast<uint8_t>((color >> 16) & 0xFF);
+    const uint8_t g = static_cast<uint8_t>((color >> 8) & 0xFF);
+    const uint8_t b = static_cast<uint8_t>(color & 0xFF);
+    return static_cast<uint16_t>(((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3));
+  }
 
   struct LcdCommand {
     uint8_t cmd;

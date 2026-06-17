@@ -63,6 +63,16 @@ struct SoundActionConfig {
   uint32_t delayMs{0};
 };
 
+struct DoorOverlayConfig {
+  String name;
+  uint16_t width{0};
+  uint16_t height{0};
+  uint16_t x{0};
+  uint16_t y{0};
+  uint32_t closedColor{0x00FF00};
+  uint32_t openColor{0xFF0000};
+};
+
 inline const char *roleName(DeviceRole role) {
   return role == DeviceRole::Cab ? "Cab" : "Canopy";
 }
@@ -108,6 +118,15 @@ public:
       soundActions_[i].repeat = prefs_.getBool(soundKey(i, "rep").c_str(), false);
       soundActions_[i].delayMs = prefs_.getUInt(soundKey(i, "del").c_str(), 0);
     }
+    for (uint8_t i = 0; i < kDoorCount; ++i) {
+      doorOverlays_[i].name = prefs_.getString(doorKey(i, "name").c_str(), defaultDoorName(i));
+      doorOverlays_[i].width = prefs_.getUShort(doorKey(i, "w").c_str(), 0);
+      doorOverlays_[i].height = prefs_.getUShort(doorKey(i, "h").c_str(), 0);
+      doorOverlays_[i].x = prefs_.getUShort(doorKey(i, "x").c_str(), 0);
+      doorOverlays_[i].y = prefs_.getUShort(doorKey(i, "y").c_str(), 0);
+      doorOverlays_[i].closedColor = prefs_.getUInt(doorKey(i, "closed").c_str(), 0x00FF00);
+      doorOverlays_[i].openColor = prefs_.getUInt(doorKey(i, "open").c_str(), 0xFF0000);
+    }
   }
 
   DeviceRole role() const { return role_; }
@@ -116,6 +135,7 @@ public:
   const uint8_t *peerMac() const { return peerMac_; }
   uint8_t doorEnabledMask() const { return doorEnabledMask_; }
   const SoundActionConfig &soundAction(uint8_t index) const { return soundActions_[index]; }
+  const DoorOverlayConfig &doorOverlay(uint8_t index) const { return doorOverlays_[index]; }
 
   String peerMacString() const {
     return hasPeer_ ? macToString(peerMac_) : String("");
@@ -183,9 +203,50 @@ public:
     prefs_.putUInt(soundKey(index, "del").c_str(), soundActions_[index].delayMs);
   }
 
+  void setDoorOverlay(uint8_t index, const String &name, uint16_t width, uint16_t height, uint16_t x, uint16_t y,
+                      uint32_t closedColor, uint32_t openColor) {
+    if (index >= kDoorCount) {
+      return;
+    }
+    doorOverlays_[index].name = cleanDoorName(index, name);
+    doorOverlays_[index].width = width;
+    doorOverlays_[index].height = height;
+    doorOverlays_[index].x = x;
+    doorOverlays_[index].y = y;
+    doorOverlays_[index].closedColor = closedColor;
+    doorOverlays_[index].openColor = openColor;
+    prefs_.putString(doorKey(index, "name").c_str(), doorOverlays_[index].name);
+    prefs_.putUShort(doorKey(index, "w").c_str(), doorOverlays_[index].width);
+    prefs_.putUShort(doorKey(index, "h").c_str(), doorOverlays_[index].height);
+    prefs_.putUShort(doorKey(index, "x").c_str(), doorOverlays_[index].x);
+    prefs_.putUShort(doorKey(index, "y").c_str(), doorOverlays_[index].y);
+    prefs_.putUInt(doorKey(index, "closed").c_str(), doorOverlays_[index].closedColor);
+    prefs_.putUInt(doorKey(index, "open").c_str(), doorOverlays_[index].openColor);
+  }
+
 private:
   static String soundKey(uint8_t index, const char *suffix) {
     return String("a") + String(index) + suffix;
+  }
+
+  static String doorKey(uint8_t index, const char *suffix) {
+    return String("d") + String(index) + suffix;
+  }
+
+  static String defaultDoorName(uint8_t index) {
+    return String("Door #") + String(index + 1);
+  }
+
+  static String cleanDoorName(uint8_t index, const String &name) {
+    String out = name;
+    out.trim();
+    if (out.length() == 0) {
+      return defaultDoorName(index);
+    }
+    if (out.length() > 31) {
+      out = out.substring(0, 31);
+    }
+    return out;
   }
 
   static String cleanSoundName(const String &name) {
@@ -207,6 +268,7 @@ private:
   bool hasPeer_{false};
   uint8_t doorEnabledMask_{0};
   SoundActionConfig soundActions_[kSoundActionCount]{};
+  DoorOverlayConfig doorOverlays_[kDoorCount]{};
 };
 
 }  // namespace shutup

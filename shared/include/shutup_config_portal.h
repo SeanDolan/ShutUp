@@ -80,18 +80,40 @@ private:
       settings_->setDeviceName(server_.arg("deviceName"));
     }
     if (role_ == DeviceRole::Canopy) {
-      for (uint8_t i = 0; i < kDoorCount; ++i) {
-        const String key = String("door") + String(i + 1);
-        settings_->setDoorEnabled(i, server_.hasArg(key));
+      if (server_.hasArg("doorTouched")) {
+        for (uint8_t i = 0; i < kDoorCount; ++i) {
+          const String key = String("door") + String(i + 1);
+          settings_->setDoorEnabled(i, server_.hasArg(key));
+        }
       }
-      for (uint8_t i = 0; i < kSoundActionCount; ++i) {
-        const String prefix = String("action") + String(i);
-        settings_->setSoundAction(
+      if (server_.hasArg("soundTouched")) {
+        for (uint8_t i = 0; i < kSoundActionCount; ++i) {
+          const String prefix = String("action") + String(i);
+          settings_->setSoundAction(
+              i,
+              server_.arg(prefix + "Cab"),
+              server_.arg(prefix + "Canopy"),
+              server_.hasArg(prefix + "Repeat"),
+              parseUIntArg(prefix + "Delay"));
+        }
+      }
+      for (uint8_t i = 0; i < kDoorCount; ++i) {
+        const String prefix = String("overlay") + String(i);
+        if (!server_.hasArg(prefix + "Touched")) {
+          continue;
+        }
+        settings_->setDoorOverlay(
             i,
-            server_.arg(prefix + "Cab"),
-            server_.arg(prefix + "Canopy"),
-            server_.hasArg(prefix + "Repeat"),
-            parseUIntArg(prefix + "Delay"));
+            server_.arg(prefix + "Name"),
+            parseUShortArg(prefix + "Width"),
+            parseUShortArg(prefix + "Height"),
+            parseUShortArg(prefix + "X"),
+            parseUShortArg(prefix + "Y"),
+            parseColorArg(prefix + "Closed", 0x00FF00),
+            parseColorArg(prefix + "Open", 0xFF0000));
+        if (espNow_) {
+          espNow_->syncDoorOverlay(i);
+        }
       }
     }
     server_.send(200, "application/json", configJson());
@@ -129,9 +151,28 @@ private:
     json += "\"hasPeer\":" + String(settings_->hasPeer() ? "true" : "false") + ",";
     json += "\"peerMac\":\"" + settings_->peerMacString() + "\",";
     json += "\"doorEnabledMask\":" + String(settings_->doorEnabledMask()) + ",";
-    json += "\"soundOptions\":[\"";
-    json += kNoSoundName;
-    json += "\"],";
+    json += "\"doorOverlays\":[";
+    for (uint8_t i = 0; i < kDoorCount; ++i) {
+      const DoorOverlayConfig &overlay = settings_->doorOverlay(i);
+      if (i > 0) {
+        json += ",";
+      }
+      json += "{";
+      json += "\"name\":\"" + escapeJson(overlay.name) + "\",";
+      json += "\"width\":" + String(overlay.width) + ",";
+      json += "\"height\":" + String(overlay.height) + ",";
+      json += "\"x\":" + String(overlay.x) + ",";
+      json += "\"y\":" + String(overlay.y) + ",";
+      json += "\"closed\":\"" + colorToHex(overlay.closedColor) + "\",";
+      json += "\"open\":\"" + colorToHex(overlay.openColor) + "\"";
+      json += "}";
+    }
+    json += "],";
+    json += "\"soundOptions\":[\"" + String(kNoSoundName) + "\"";
+    for (size_t i = 0; i < kSoundAssetCount; ++i) {
+      json += ",\"" + escapeJson(kSoundAssets[i]) + "\"";
+    }
+    json += "],";
     json += "\"soundActions\":[";
     for (uint8_t i = 0; i < kSoundActionCount; ++i) {
       const SoundActionConfig &action = settings_->soundAction(i);
@@ -188,6 +229,34 @@ private:
       return 0;
     }
     return static_cast<uint32_t>(value.toInt());
+  }
+
+  uint16_t parseUShortArg(const String &key) {
+    const uint32_t value = parseUIntArg(key);
+    return static_cast<uint16_t>(value > 65535 ? 65535 : value);
+  }
+
+  uint32_t parseColorArg(const String &key, uint32_t fallback) {
+    if (!server_.hasArg(key)) {
+      return fallback;
+    }
+    String value = server_.arg(key);
+    value.trim();
+    if (value.startsWith("#")) {
+      value = value.substring(1);
+    }
+    if (value.length() != 6) {
+      return fallback;
+    }
+    char *end = nullptr;
+    const uint32_t color = strtoul(value.c_str(), &end, 16);
+    return end && *end == '\0' ? color : fallback;
+  }
+
+  static String colorToHex(uint32_t color) {
+    char text[8];
+    snprintf(text, sizeof(text), "#%06lX", static_cast<unsigned long>(color & 0xFFFFFF));
+    return String(text);
   }
 
   DNSServer dns_;

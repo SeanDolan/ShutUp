@@ -96,7 +96,7 @@ void updateNormalOperation() {
   }
 
   if (now - lastDisplayMs >= 500 || doorStatesChanged || linkFresh != lastLinkFresh) {
-    display.showNormal(doorStates, linkFresh, espNow.heartbeatSuccessPercent(), espNow.averageHeartbeatMs());
+    display.showNormal(doorStates, settings, linkFresh, espNow.heartbeatSuccessPercent(), espNow.averageHeartbeatMs());
     lastDisplayMs = now;
     memcpy(lastDoorStates, doorStates, sizeof(lastDoorStates));
     lastLinkFresh = linkFresh;

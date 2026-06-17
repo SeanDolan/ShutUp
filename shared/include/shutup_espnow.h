@@ -18,6 +18,11 @@ enum class PacketType : uint8_t {
   ConfigSync = 6,
 };
 
+enum class ConfigSyncKind : uint8_t {
+  SoundAction = 1,
+  DoorOverlay = 2,
+};
+
 struct ShutupPacket {
   uint32_t magic;
   uint8_t version;
@@ -30,10 +35,18 @@ struct ShutupPacket {
   int8_t rssi;
   uint8_t reserved0;
   char name[24];
+  uint8_t configKind;
   uint8_t configIndex;
   uint8_t repeat;
-  uint8_t reserved[2];
+  uint8_t reserved[1];
   uint32_t delayMs;
+  uint16_t overlayWidth;
+  uint16_t overlayHeight;
+  uint16_t overlayX;
+  uint16_t overlayY;
+  uint32_t overlayClosedColor;
+  uint32_t overlayOpenColor;
+  char overlayName[24];
   char cabSound[24];
   char canopySound[24];
 };
@@ -79,8 +92,12 @@ public:
     if (!configMode_ && role_ == DeviceRole::Canopy && settings_ && settings_->hasPeer()) {
       if (now - lastConfigSyncMs_ >= 1000) {
         lastConfigSyncMs_ = now;
-        sendConfigSync(settings_->peerMac(), nextConfigSyncIndex_);
-        nextConfigSyncIndex_ = static_cast<uint8_t>((nextConfigSyncIndex_ + 1) % kSoundActionCount);
+        if (nextConfigSyncSlot_ < kSoundActionCount) {
+          sendSoundActionConfig(settings_->peerMac(), nextConfigSyncSlot_);
+        } else {
+          sendDoorOverlayConfig(settings_->peerMac(), static_cast<uint8_t>(nextConfigSyncSlot_ - kSoundActionCount));
+        }
+        nextConfigSyncSlot_ = static_cast<uint8_t>((nextConfigSyncSlot_ + 1) % (kSoundActionCount + kDoorCount));
       }
     }
   }
@@ -121,6 +138,12 @@ public:
 
   void setCanopyDoorStates(const DoorState states[kDoorCount]) {
     memcpy(doorStates_, states, sizeof(doorStates_));
+  }
+
+  void syncDoorOverlay(uint8_t index) {
+    if (settings_ && settings_->hasPeer()) {
+      sendDoorOverlayConfig(settings_->peerMac(), index);
+    }
   }
 
 private:
@@ -183,8 +206,17 @@ private:
       }
       return;
     }
-    if (type == PacketType::ConfigSync && role_ == DeviceRole::Cab && packet.configIndex < kSoundActionCount) {
+    if (type == PacketType::ConfigSync && role_ == DeviceRole::Cab &&
+        packet.configKind == static_cast<uint8_t>(ConfigSyncKind::SoundAction) &&
+        packet.configIndex < kSoundActionCount) {
       settings_->setSoundAction(packet.configIndex, packet.cabSound, packet.canopySound, packet.repeat != 0, packet.delayMs);
+      return;
+    }
+    if (type == PacketType::ConfigSync && role_ == DeviceRole::Cab &&
+        packet.configKind == static_cast<uint8_t>(ConfigSyncKind::DoorOverlay) &&
+        packet.configIndex < kDoorCount) {
+      settings_->setDoorOverlay(packet.configIndex, packet.overlayName, packet.overlayWidth, packet.overlayHeight,
+                                packet.overlayX, packet.overlayY, packet.overlayClosedColor, packet.overlayOpenColor);
       return;
     }
   }
@@ -258,18 +290,38 @@ private:
     esp_now_send(mac, reinterpret_cast<uint8_t *>(&packet), sizeof(packet));
   }
 
-  void sendConfigSync(const uint8_t mac[6], uint8_t index) {
+  void sendSoundActionConfig(const uint8_t mac[6], uint8_t index) {
     if (!settings_ || index >= kSoundActionCount) {
       return;
     }
     ShutupPacket packet{};
     fillPacket(packet, PacketType::ConfigSync);
     const SoundActionConfig &action = settings_->soundAction(index);
+    packet.configKind = static_cast<uint8_t>(ConfigSyncKind::SoundAction);
     packet.configIndex = index;
     packet.repeat = action.repeat ? 1 : 0;
     packet.delayMs = action.delayMs;
     strlcpy(packet.cabSound, action.cabSound.c_str(), sizeof(packet.cabSound));
     strlcpy(packet.canopySound, action.canopySound.c_str(), sizeof(packet.canopySound));
+    esp_now_send(mac, reinterpret_cast<uint8_t *>(&packet), sizeof(packet));
+  }
+
+  void sendDoorOverlayConfig(const uint8_t mac[6], uint8_t index) {
+    if (!settings_ || index >= kDoorCount) {
+      return;
+    }
+    ShutupPacket packet{};
+    fillPacket(packet, PacketType::ConfigSync);
+    const DoorOverlayConfig &overlay = settings_->doorOverlay(index);
+    packet.configKind = static_cast<uint8_t>(ConfigSyncKind::DoorOverlay);
+    packet.configIndex = index;
+    packet.overlayWidth = overlay.width;
+    packet.overlayHeight = overlay.height;
+    packet.overlayX = overlay.x;
+    packet.overlayY = overlay.y;
+    packet.overlayClosedColor = overlay.closedColor;
+    packet.overlayOpenColor = overlay.openColor;
+    strlcpy(packet.overlayName, overlay.name.c_str(), sizeof(packet.overlayName));
     esp_now_send(mac, reinterpret_cast<uint8_t *>(&packet), sizeof(packet));
   }
 
@@ -331,7 +383,7 @@ private:
   uint16_t averageHeartbeatMs_{0};
   uint32_t lastHeartbeatSequence_{0};
   uint32_t lastHeartbeatSentMs_{0};
-  uint8_t nextConfigSyncIndex_{0};
+  uint8_t nextConfigSyncSlot_{0};
   DoorState doorStates_[kDoorCount]{};
   DoorState lastDoorStates_[kDoorCount]{};
   String localMac_;

@@ -167,6 +167,15 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
     .repeat-cell { text-align: center; }
     .repeat-cell input { width: auto; }
     .sound-table button { width: 100%; padding-left: 8px; padding-right: 8px; }
+    .overlay-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .overlay-table th, .overlay-table td { border-bottom: 1px solid var(--line); padding: 8px; text-align: left; vertical-align: middle; }
+    .overlay-table th { background: var(--panel); }
+    .overlay-table .num-col { width: 42px; text-align: center; font-weight: 700; }
+    .overlay-table .name-col { width: auto; }
+    .overlay-table .small-col { width: 78px; }
+    .overlay-table .color-col { width: 76px; }
+    .overlay-table .save-col { width: 72px; }
+    .overlay-table button { width: 100%; padding-left: 8px; padding-right: 8px; }
   </style>
 </head>
 <body>
@@ -221,6 +230,26 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
     </section>
 
     <section>
+      <h2>Cab Door Overlay</h2>
+      <table class="overlay-table">
+        <thead>
+          <tr>
+            <th class="num-col"></th>
+            <th class="name-col">Name</th>
+            <th class="small-col">Width</th>
+            <th class="small-col">Height</th>
+            <th class="small-col">X</th>
+            <th class="small-col">Y</th>
+            <th class="color-col">Closed</th>
+            <th class="color-col">Open</th>
+            <th class="save-col">Save</th>
+          </tr>
+        </thead>
+        <tbody id="overlayRows"></tbody>
+      </table>
+    </section>
+
+    <section>
       <h2>Pair Devices</h2>
       <p>Put both devices into config mode. Connect your phone to either config Wi-Fi network, open that config page, then press Pair Devices. The other device does not need its page open.</p>
       <div class="status" id="pairStatus">Pairing idle.</div>
@@ -238,6 +267,14 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
       hasPeer: true,
       peerMac: "24:6F:28:CA:B0:01",
       doorEnabledMask: 0b00111111,
+      doorOverlays: [
+        { name: "Door #1", width: 0, height: 0, x: 0, y: 0, closed: "#00FF00", open: "#FF0000" },
+        { name: "Door #2", width: 0, height: 0, x: 0, y: 0, closed: "#00FF00", open: "#FF0000" },
+        { name: "Door #3", width: 0, height: 0, x: 0, y: 0, closed: "#00FF00", open: "#FF0000" },
+        { name: "Door #4", width: 0, height: 0, x: 0, y: 0, closed: "#00FF00", open: "#FF0000" },
+        { name: "Door #5", width: 0, height: 0, x: 0, y: 0, closed: "#00FF00", open: "#FF0000" },
+        { name: "Door #6", width: 0, height: 0, x: 0, y: 0, closed: "#00FF00", open: "#FF0000" }
+      ],
       soundOptions: ["None"],
       soundActions: [
         { name: "Startup", cab: "None", canopy: "None", repeat: false, delay: 0 },
@@ -264,6 +301,7 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
         $("door" + (i + 1)).checked = (config.doorEnabledMask & (1 << i)) !== 0;
       }
       renderSoundRows(config);
+      renderOverlayRows(config);
     }
 
     function soundOptionsHtml(options, selected) {
@@ -290,6 +328,29 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
       });
     }
 
+    function renderOverlayRows(config) {
+      const overlays = config.doorOverlays || demoConfig.doorOverlays;
+      $("overlayRows").innerHTML = overlays.map((overlay, index) => `
+        <tr>
+          <td class="num-col">${index + 1}</td>
+          <td><input id="overlay${index}Name" type="text" maxlength="31" value="${escapeAttr(overlay.name || `Door #${index + 1}`)}"></td>
+          <td><input id="overlay${index}Width" type="number" min="0" max="320" value="${overlay.width || 0}"></td>
+          <td><input id="overlay${index}Height" type="number" min="0" max="170" value="${overlay.height || 0}"></td>
+          <td><input id="overlay${index}X" type="number" min="0" max="320" value="${overlay.x || 0}"></td>
+          <td><input id="overlay${index}Y" type="number" min="0" max="170" value="${overlay.y || 0}"></td>
+          <td><input id="overlay${index}Closed" type="color" value="${overlay.closed || "#00FF00"}"></td>
+          <td><input id="overlay${index}Open" type="color" value="${overlay.open || "#FF0000"}"></td>
+          <td><button type="button" data-overlay-save="${index}">Save</button></td>
+        </tr>`).join("");
+      document.querySelectorAll("[data-overlay-save]").forEach((button) => {
+        button.addEventListener("click", () => saveOverlay(Number(button.dataset.overlaySave)));
+      });
+    }
+
+    function escapeAttr(value) {
+      return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll('"', "&quot;");
+    }
+
     async function loadConfig() {
       try { render(await api("/api/config")); }
       catch { render(demoConfig); }
@@ -298,6 +359,8 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
     async function saveConfig() {
       const body = new URLSearchParams();
       body.set("deviceName", $("deviceName").value);
+      body.set("doorTouched", "on");
+      body.set("soundTouched", "on");
       for (let i = 1; i <= 6; i++) {
         if ($("door" + i).checked) body.set("door" + i, "on");
       }
@@ -334,6 +397,32 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
       try { await api("/api/reboot", { method: "POST" }); } catch {}
     }
 
+    async function saveOverlay(index) {
+      const body = new URLSearchParams();
+      body.set(`overlay${index}Touched`, "on");
+      body.set(`overlay${index}Name`, $(`overlay${index}Name`).value || `Door #${index + 1}`);
+      body.set(`overlay${index}Width`, $(`overlay${index}Width`).value);
+      body.set(`overlay${index}Height`, $(`overlay${index}Height`).value);
+      body.set(`overlay${index}X`, $(`overlay${index}X`).value);
+      body.set(`overlay${index}Y`, $(`overlay${index}Y`).value);
+      body.set(`overlay${index}Closed`, $(`overlay${index}Closed`).value);
+      body.set(`overlay${index}Open`, $(`overlay${index}Open`).value);
+      try { render(await api("/api/config", { method: "POST", body })); }
+      catch {
+        const overlays = [...demoConfig.doorOverlays];
+        overlays[index] = {
+          name: body.get(`overlay${index}Name`),
+          width: Number(body.get(`overlay${index}Width`)),
+          height: Number(body.get(`overlay${index}Height`)),
+          x: Number(body.get(`overlay${index}X`)),
+          y: Number(body.get(`overlay${index}Y`)),
+          closed: body.get(`overlay${index}Closed`),
+          open: body.get(`overlay${index}Open`)
+        };
+        render({ ...demoConfig, doorOverlays: overlays });
+      }
+    }
+
     async function demoSound(index) {
       const body = new URLSearchParams();
       body.set("sound", $(`action${index}Canopy`).value);
@@ -349,5 +438,9 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
 </body>
 </html>
 )SHUTUP_HTML";
+
+static constexpr size_t kSoundAssetCount = 0;
+static constexpr const char *kSoundAssets[] = {
+};
 
 }  // namespace shutup
