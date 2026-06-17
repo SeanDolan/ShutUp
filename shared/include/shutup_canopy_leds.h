@@ -30,7 +30,7 @@ public:
     clear();
   }
 
-  void show(uint8_t enabledMask, uint8_t openMask, LinkLedState linkState) {
+  void show(const DoorState states[kDoorCount], LinkLedState linkState) {
     setPixel(0, 0, 48, 0);
     switch (linkState) {
       case LinkLedState::Connected:
@@ -45,10 +45,9 @@ public:
     }
     for (uint8_t i = 0; i < kDoorCount; ++i) {
       const uint8_t led = static_cast<uint8_t>(i + 2);
-      const uint8_t bit = static_cast<uint8_t>(1U << i);
-      if ((enabledMask & bit) == 0) {
+      if (states[i] == DoorState::Disabled) {
         setPixel(led, 0, 0, 0);
-      } else if ((openMask & bit) != 0) {
+      } else if (states[i] == DoorState::Open) {
         setPixel(led, 48, 0, 0);
       } else {
         setPixel(led, 0, 48, 0);

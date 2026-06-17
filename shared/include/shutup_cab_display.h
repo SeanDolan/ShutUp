@@ -36,23 +36,26 @@ public:
     drawCenteredText("STARTING", 94, 2, kWhite);
   }
 
-  void showNormal(uint8_t enabledMask, uint8_t openMask, bool linkFresh, uint8_t heartbeatPercent) {
+  void showNormal(const DoorState states[kDoorCount], bool linkFresh, uint8_t heartbeatPercent,
+                  uint16_t averageHeartbeatMs) {
     fillScreen(kBlack);
     drawText(8, 8, "SHUTUP", 2, kWhite);
     drawText(194, 8, linkFresh ? "CONNECTED" : "NO LINK", 1, linkFresh ? kGreen : kRed);
     drawText(194, 24, "HEALTH", 1, kWhite);
     drawNumber(240, 24, heartbeatPercent, 1, heartbeatPercent >= 80 ? kGreen : kOrange);
     drawText(258, 24, "%", 1, heartbeatPercent >= 80 ? kGreen : kOrange);
+    drawText(194, 38, "AVG", 1, kWhite);
+    drawNumber(222, 38, averageHeartbeatMs, 1, kWhite);
+    drawText(258, 38, "MS", 1, kWhite);
 
     for (uint8_t i = 0; i < kDoorCount; ++i) {
-      const uint8_t bit = static_cast<uint8_t>(1U << i);
       const int x = 18 + (i % 3) * 98;
       const int y = 62 + (i / 3) * 50;
-      const bool enabled = (enabledMask & bit) != 0;
-      const bool open = (openMask & bit) != 0;
-      const uint16_t color = !enabled ? kDim : (open ? kRed : kGreen);
+      const bool enabled = states[i] != DoorState::Disabled;
+      const bool doorOpen = states[i] == DoorState::Open;
+      const uint16_t color = !enabled ? kDim : (doorOpen ? kRed : kGreen);
       fillRect(x, y, 78, 32, color);
-      drawText(x + 8, y + 9, !enabled ? "OFF" : (open ? "OPEN" : "OK"), 1, kBlack);
+      drawText(x + 8, y + 9, !enabled ? "OFF" : (doorOpen ? "OPEN" : "OK"), 1, kBlack);
       drawNumber(x + 58, y + 9, i + 1, 1, kBlack);
     }
   }

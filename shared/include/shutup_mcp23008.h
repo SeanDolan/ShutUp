@@ -16,12 +16,22 @@ public:
     writeRegister(0x06, 0x3F);  // Pull-ups for normally closed switches to ground.
   }
 
-  uint8_t readOpenMask(uint8_t enabledMask) {
+  void readDoorStates(uint8_t enabledMask, DoorState states[kDoorCount]) {
     uint8_t gpio = 0;
     if (!readRegister(0x09, gpio)) {
-      return enabledMask;
+      for (uint8_t i = 0; i < kDoorCount; ++i) {
+        states[i] = (enabledMask & (1U << i)) != 0 ? DoorState::Open : DoorState::Disabled;
+      }
+      return;
     }
-    return static_cast<uint8_t>(gpio & enabledMask & 0x3F);
+    for (uint8_t i = 0; i < kDoorCount; ++i) {
+      const uint8_t bit = static_cast<uint8_t>(1U << i);
+      if ((enabledMask & bit) == 0) {
+        states[i] = DoorState::Disabled;
+      } else {
+        states[i] = (gpio & bit) == 0 ? DoorState::Open : DoorState::Closed;
+      }
+    }
   }
 
 private:

@@ -13,9 +13,8 @@ constexpr uint8_t kEspNowChannel = 1;
 enum class PacketType : uint8_t {
   PairRequest = 1,
   PairAck = 2,
-  StateRequest = 3,
-  StateResponse = 4,
-  Heartbeat = 5,
+  HeartbeatRequest = 3,
+  HeartbeatResponse = 4,
   ConfigSync = 6,
 };
 
@@ -26,8 +25,10 @@ struct ShutupPacket {
   uint8_t role;
   uint8_t mac[6];
   uint32_t sequence;
-  uint8_t doorEnabledMask;
-  uint8_t doorOpenMask;
+  uint8_t doorStates[kDoorCount];
+  uint16_t heartbeatLatencyMs;
+  int8_t rssi;
+  uint8_t reserved0;
   char name[24];
   uint8_t configIndex;
   uint8_t reserved[3];
@@ -72,7 +73,7 @@ public:
     if (!configMode_ && role_ == DeviceRole::Cab && settings_ && settings_->hasPeer()) {
       if (now - lastStateRequestMs_ >= 1000) {
         lastStateRequestMs_ = now;
-        sendStateRequest();
+        sendHeartbeatRequest();
       }
     }
     if (!configMode_ && role_ == DeviceRole::Canopy && settings_ && settings_->hasPeer()) {
@@ -95,8 +96,14 @@ public:
   String localMacString() const { return localMac_; }
   String lastPairMessage() const { return lastPairMessage_; }
   bool normalLinkReady() const { return settings_ && settings_->hasPeer(); }
-  uint8_t lastDoorEnabledMask() const { return lastDoorEnabledMask_; }
-  uint8_t lastDoorOpenMask() const { return lastDoorOpenMask_; }
+  DoorState lastDoorState(uint8_t index) const {
+    if (index >= kDoorCount) {
+      return DoorState::Disabled;
+    }
+    return lastDoorStates_[index];
+  }
+  uint8_t lastDoorEnabledMask() const { return doorEnabledMaskFrom(lastDoorStates_); }
+  uint8_t lastDoorOpenMask() const { return doorOpenMaskFrom(lastDoorStates_); }
   uint32_t lastStateMessageMs() const { return lastStateMessageMs_; }
   uint32_t lastCabSeenMs() const { return lastCabSeenMs_; }
   bool cabLinkActive(uint32_t now = millis()) const { return lastCabSeenMs_ != 0 && now - lastCabSeenMs_ <= 5000; }
@@ -108,10 +115,12 @@ public:
     }
     return static_cast<uint8_t>((heartbeatOk_ * 100U) / heartbeatSent_);
   }
+  uint16_t averageHeartbeatMs() const { return averageHeartbeatMs_; }
+  int8_t lastRssi() const { return 0; }
+  bool rssiAvailable() const { return false; }
 
-  void setCanopyDoorState(uint8_t enabledMask, uint8_t openMask) {
-    doorEnabledMask_ = enabledMask;
-    doorOpenMask_ = openMask;
+  void setCanopyDoorStates(const DoorState states[kDoorCount]) {
+    memcpy(doorStates_, states, sizeof(doorStates_));
   }
 
 private:
@@ -156,17 +165,21 @@ private:
                          " " + macToString(senderMac);
       return;
     }
-    if (type == PacketType::StateRequest && role_ == DeviceRole::Canopy) {
+    if (type == PacketType::HeartbeatRequest && role_ == DeviceRole::Canopy) {
       lastCabSeenMs_ = millis();
-      sendStateResponse(senderMac);
+      sendHeartbeatResponse(senderMac, packet.sequence);
       return;
     }
-    if (type == PacketType::StateResponse && role_ == DeviceRole::Cab) {
-      lastDoorEnabledMask_ = packet.doorEnabledMask;
-      lastDoorOpenMask_ = packet.doorOpenMask;
-      lastStateMessageMs_ = millis();
+    if (type == PacketType::HeartbeatResponse && role_ == DeviceRole::Cab) {
+      const uint32_t now = millis();
+      memcpy(lastDoorStates_, packet.doorStates, sizeof(lastDoorStates_));
+      lastStateMessageMs_ = now;
       if (heartbeatOk_ < 250) {
         ++heartbeatOk_;
+      }
+      if (packet.sequence == lastHeartbeatSequence_) {
+        const uint32_t elapsed = now - lastHeartbeatSentMs_;
+        recordHeartbeatLatency(static_cast<uint16_t>(elapsed > 65535 ? 65535 : elapsed));
       }
       return;
     }
@@ -183,8 +196,9 @@ private:
     packet.role = static_cast<uint8_t>(role_);
     WiFi.macAddress(packet.mac);
     packet.sequence = ++sequence_;
-    packet.doorEnabledMask = doorEnabledMask_;
-    packet.doorOpenMask = doorOpenMask_;
+    memcpy(packet.doorStates, doorStates_, sizeof(packet.doorStates));
+    packet.heartbeatLatencyMs = averageHeartbeatMs_;
+    packet.rssi = 0;
     if (settings_) {
       strlcpy(packet.name, settings_->deviceName().c_str(), sizeof(packet.name));
     }
@@ -220,12 +234,14 @@ private:
     esp_now_send(mac, reinterpret_cast<uint8_t *>(&packet), sizeof(packet));
   }
 
-  void sendStateRequest() {
+  void sendHeartbeatRequest() {
     if (!settings_ || !settings_->hasPeer()) {
       return;
     }
     ShutupPacket packet{};
-    fillPacket(packet, PacketType::StateRequest);
+    fillPacket(packet, PacketType::HeartbeatRequest);
+    lastHeartbeatSequence_ = packet.sequence;
+    lastHeartbeatSentMs_ = millis();
     if (heartbeatSent_ < 250) {
       ++heartbeatSent_;
     } else {
@@ -235,9 +251,10 @@ private:
     esp_now_send(settings_->peerMac(), reinterpret_cast<uint8_t *>(&packet), sizeof(packet));
   }
 
-  void sendStateResponse(const uint8_t mac[6]) {
+  void sendHeartbeatResponse(const uint8_t mac[6], uint32_t requestSequence) {
     ShutupPacket packet{};
-    fillPacket(packet, PacketType::StateResponse);
+    fillPacket(packet, PacketType::HeartbeatResponse);
+    packet.sequence = requestSequence;
     esp_now_send(mac, reinterpret_cast<uint8_t *>(&packet), sizeof(packet));
   }
 
@@ -261,6 +278,39 @@ private:
     return active;
   }
 
+  void recordHeartbeatLatency(uint16_t latencyMs) {
+    heartbeatLatencies_[heartbeatLatencyIndex_] = latencyMs;
+    heartbeatLatencyIndex_ = static_cast<uint8_t>((heartbeatLatencyIndex_ + 1) % kHeartbeatWindow);
+    if (heartbeatLatencyCount_ < kHeartbeatWindow) {
+      ++heartbeatLatencyCount_;
+    }
+    uint32_t total = 0;
+    for (uint8_t i = 0; i < heartbeatLatencyCount_; ++i) {
+      total += heartbeatLatencies_[i];
+    }
+    averageHeartbeatMs_ = static_cast<uint16_t>(total / heartbeatLatencyCount_);
+  }
+
+  static uint8_t doorEnabledMaskFrom(const DoorState states[kDoorCount]) {
+    uint8_t mask = 0;
+    for (uint8_t i = 0; i < kDoorCount; ++i) {
+      if (states[i] != DoorState::Disabled) {
+        mask |= static_cast<uint8_t>(1U << i);
+      }
+    }
+    return mask;
+  }
+
+  static uint8_t doorOpenMaskFrom(const DoorState states[kDoorCount]) {
+    uint8_t mask = 0;
+    for (uint8_t i = 0; i < kDoorCount; ++i) {
+      if (states[i] == DoorState::Open) {
+        mask |= static_cast<uint8_t>(1U << i);
+      }
+    }
+    return mask;
+  }
+
   DeviceRole role_{DeviceRole::Cab};
   SettingsStore *settings_{nullptr};
   bool configMode_{false};
@@ -274,11 +324,16 @@ private:
   uint32_t sequence_{0};
   uint16_t heartbeatSent_{0};
   uint16_t heartbeatOk_{0};
+  static constexpr uint8_t kHeartbeatWindow = 5;
+  uint16_t heartbeatLatencies_[kHeartbeatWindow]{};
+  uint8_t heartbeatLatencyIndex_{0};
+  uint8_t heartbeatLatencyCount_{0};
+  uint16_t averageHeartbeatMs_{0};
+  uint32_t lastHeartbeatSequence_{0};
+  uint32_t lastHeartbeatSentMs_{0};
   uint8_t nextConfigSyncIndex_{0};
-  uint8_t doorEnabledMask_{0};
-  uint8_t doorOpenMask_{0};
-  uint8_t lastDoorEnabledMask_{0};
-  uint8_t lastDoorOpenMask_{0};
+  DoorState doorStates_[kDoorCount]{};
+  DoorState lastDoorStates_[kDoorCount]{};
   String localMac_;
   String lastPairMessage_{"Idle"};
 };

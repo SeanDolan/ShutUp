@@ -55,7 +55,10 @@ Project GPIO assignments are listed in the selected pin assignments section belo
   - Canopy acts as the always-powered state holder.
   - Cab acts as the state client and periodically requests Canopy state.
 - Cab blacks out the T-Display-S3 screen immediately at startup, then shows config mode or normal status screens.
-- Canopy reads door state through MCP23008 GPA0-GPA5 and reports enabled door states over ESP-NOW.
+- Cab sends a non-blocking ESP-NOW heartbeat request every 1 second; Canopy replies with a six-entry physical door-state array.
+- Cab connection health uses heartbeat success rate and average round-trip time from the last 5 successful heartbeats.
+- ESP-NOW RSSI is not available through the receive callback exposed by the current local Arduino/ESP32 framework.
+- Canopy reads physical door state through MCP23008 GPA0-GPA5 and reports enabled door states over ESP-NOW.
 - Canopy drives the 8 WS2812S LEDs as power, connectivity, and six door state indicators.
 - Canopy config includes the action sound table for Startup, Connectivity success, Connectivity error, Doors ok, and Door alarm.
 
@@ -86,7 +89,9 @@ MCP23008 wiring required by the current code:
 
 - MCP23008 address is `0x20`; A0, A1, and A2 must be tied low.
 - Door sensor 1-6 map to MCP23008 GPA0-GPA5 in order.
-- Normally closed reed switches should pull the MCP23008 input low when closed; the code enables MCP23008 pull-ups and treats high as open/error.
+- The code records physical door state only: `open`, `closed`, or `disabled`.
+- The code enables MCP23008 pull-ups. LOW means the reed contact is closed and is recorded as physical door `open`; HIGH means the reed contact is open and is recorded as physical door `closed`.
+- With this wiring logic, an open-circuit cable fault reads the same as physical door `closed`. If cable fault must report as physical door `open`, the input wiring strategy needs to change before PCB design.
 
 ## Config Page Demos
 

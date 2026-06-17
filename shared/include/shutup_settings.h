@@ -14,6 +14,24 @@ constexpr uint8_t kDoorCount = 6;
 constexpr uint8_t kSoundActionCount = 5;
 constexpr const char *kNoSoundName = "None";
 
+enum class DoorState : uint8_t {
+  Disabled = 0,
+  Closed = 1,
+  Open = 2,
+};
+
+inline const char *doorStateName(DoorState state) {
+  switch (state) {
+    case DoorState::Disabled:
+      return "disabled";
+    case DoorState::Closed:
+      return "closed";
+    case DoorState::Open:
+      return "open";
+  }
+  return "disabled";
+}
+
 enum class SoundAction : uint8_t {
   Startup = 0,
   ConnectivitySuccess = 1,

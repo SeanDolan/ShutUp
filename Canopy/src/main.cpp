@@ -35,10 +35,9 @@ bool configMode = false;
 bool muted = false;
 bool alarmActive = false;
 bool lastCabActive = false;
-uint8_t lastEnabledMask = 0;
-uint8_t lastOpenMask = 0;
 uint32_t lastDoorReadMs = 0;
-uint8_t currentOpenMask = 0;
+shutup::DoorState currentDoorStates[shutup::kDoorCount]{};
+shutup::DoorState lastDoorStates[shutup::kDoorCount]{};
 
 void setupHardwarePins() {
   pinMode(kConfigButtonGpio, INPUT_PULLUP);
@@ -48,11 +47,11 @@ void setupHardwarePins() {
   Wire.begin(kMcp23008SdaGpio, kMcp23008SclGpio);
   doorReader.begin(Wire, kMcp23008Address);
   statusLeds.begin(kLedStripDataGpio);
-  statusLeds.show(0, 0, shutup::LinkLedState::Disconnected);
+  statusLeds.show(currentDoorStates, shutup::LinkLedState::Disconnected);
 }
 
-uint8_t readDoorOpenMask() {
-  return doorReader.readOpenMask(settings.doorEnabledMask());
+void readDoorStates(shutup::DoorState states[shutup::kDoorCount]) {
+  doorReader.readDoorStates(settings.doorEnabledMask(), states);
 }
 
 void startConfigMode() {
@@ -89,11 +88,14 @@ shutup::LinkLedState canopyLinkState(uint32_t now) {
 void updateCanopyOperation() {
   const uint32_t now = millis();
   const bool cabActive = espNow.cabLinkActive(now);
-  const uint8_t enabledMask = settings.doorEnabledMask();
+  bool doorStatesChanged = false;
 
   if (now - lastDoorReadMs >= 50) {
     lastDoorReadMs = now;
-    currentOpenMask = readDoorOpenMask();
+    readDoorStates(currentDoorStates);
+    for (uint8_t i = 0; i < shutup::kDoorCount; ++i) {
+      doorStatesChanged = doorStatesChanged || currentDoorStates[i] != lastDoorStates[i];
+    }
   }
 
   if (digitalRead(kMuteButtonGpio) == LOW) {
@@ -107,7 +109,10 @@ void updateCanopyOperation() {
     soundPlayer.trigger(shutup::SoundAction::ConnectivityError);
   }
 
-  const bool anyDoorOpen = currentOpenMask != 0;
+  bool anyDoorOpen = false;
+  for (uint8_t i = 0; i < shutup::kDoorCount; ++i) {
+    anyDoorOpen = anyDoorOpen || currentDoorStates[i] == shutup::DoorState::Open;
+  }
   if (anyDoorOpen && !muted && !alarmActive) {
     alarmActive = true;
     soundPlayer.trigger(shutup::SoundAction::DoorAlarm);
@@ -119,14 +124,12 @@ void updateCanopyOperation() {
     soundPlayer.trigger(shutup::SoundAction::DoorsOk);
   }
 
-  if (enabledMask != lastEnabledMask || currentOpenMask != lastOpenMask || cabActive != lastCabActive ||
-      now - lastDoorReadMs < 5) {
-    statusLeds.show(enabledMask, currentOpenMask, canopyLinkState(now));
-    lastEnabledMask = enabledMask;
-    lastOpenMask = currentOpenMask;
+  if (doorStatesChanged || cabActive != lastCabActive || now - lastDoorReadMs < 5) {
+    statusLeds.show(currentDoorStates, canopyLinkState(now));
+    memcpy(lastDoorStates, currentDoorStates, sizeof(lastDoorStates));
     lastCabActive = cabActive;
   }
-  espNow.setCanopyDoorState(enabledMask, currentOpenMask);
+  espNow.setCanopyDoorStates(currentDoorStates);
 }
 
 }  // namespace
@@ -146,7 +149,8 @@ void setup() {
 void loop() {
   if (configMode) {
     portal.loop();
-    statusLeds.show(settings.doorEnabledMask(), readDoorOpenMask(), shutup::LinkLedState::Disconnected);
+    readDoorStates(currentDoorStates);
+    statusLeds.show(currentDoorStates, shutup::LinkLedState::Disconnected);
   } else {
     updateCanopyOperation();
   }

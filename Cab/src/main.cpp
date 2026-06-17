@@ -28,8 +28,7 @@ bool configMode = false;
 bool muted = false;
 bool alarmActive = false;
 bool lastLinkFresh = false;
-uint8_t lastEnabledMask = 0;
-uint8_t lastOpenMask = 0;
+shutup::DoorState lastDoorStates[shutup::kDoorCount]{};
 uint32_t lastDisplayMs = 0;
 
 void setupHardwarePins() {
@@ -65,9 +64,14 @@ void startNormalMode() {
 void updateNormalOperation() {
   const uint32_t now = millis();
   const bool linkFresh = espNow.cabStateFresh(now);
-  const uint8_t enabledMask = espNow.lastDoorEnabledMask();
-  const uint8_t openMask = static_cast<uint8_t>(espNow.lastDoorOpenMask() & enabledMask);
-  const bool anyDoorOpen = openMask != 0;
+  shutup::DoorState doorStates[shutup::kDoorCount]{};
+  bool anyDoorOpen = false;
+  bool doorStatesChanged = false;
+  for (uint8_t i = 0; i < shutup::kDoorCount; ++i) {
+    doorStates[i] = espNow.lastDoorState(i);
+    anyDoorOpen = anyDoorOpen || doorStates[i] == shutup::DoorState::Open;
+    doorStatesChanged = doorStatesChanged || doorStates[i] != lastDoorStates[i];
+  }
 
   if (digitalRead(kMuteInputGpio) == LOW) {
     muted = true;
@@ -91,12 +95,10 @@ void updateNormalOperation() {
     soundPlayer.trigger(shutup::SoundAction::DoorsOk);
   }
 
-  if (now - lastDisplayMs >= 500 || enabledMask != lastEnabledMask || openMask != lastOpenMask ||
-      linkFresh != lastLinkFresh) {
-    display.showNormal(enabledMask, openMask, linkFresh, espNow.heartbeatSuccessPercent());
+  if (now - lastDisplayMs >= 500 || doorStatesChanged || linkFresh != lastLinkFresh) {
+    display.showNormal(doorStates, linkFresh, espNow.heartbeatSuccessPercent(), espNow.averageHeartbeatMs());
     lastDisplayMs = now;
-    lastEnabledMask = enabledMask;
-    lastOpenMask = openMask;
+    memcpy(lastDoorStates, doorStates, sizeof(lastDoorStates));
     lastLinkFresh = linkFresh;
   }
 }
