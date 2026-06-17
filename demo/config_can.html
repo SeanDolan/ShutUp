@@ -184,8 +184,10 @@
     };
 
     const $ = (id) => document.getElementById(id);
+    const demoMode = window.location.protocol === "file:";
 
     async function api(path, options) {
+      if (demoMode) throw new Error("Demo mode");
       const response = await fetch(path, options);
       if (!response.ok) throw new Error("Request failed");
       return response.json();
@@ -250,6 +252,10 @@
     }
 
     async function loadConfig() {
+      if (demoMode) {
+        render(demoConfig);
+        return;
+      }
       try { render(await api("/api/config")); }
       catch { render(demoConfig); }
     }
@@ -268,6 +274,12 @@
         if ($(`action${i}Repeat`).checked) body.set(`action${i}Repeat`, "on");
         body.set(`action${i}Delay`, $(`action${i}Delay`).value);
       }
+      if (demoMode) {
+        let mask = 0;
+        for (let i = 0; i < 6; i++) if ($("door" + (i + 1)).checked) mask |= (1 << i);
+        render({ ...demoConfig, deviceName: $("deviceName").value, doorEnabledMask: mask });
+        return;
+      }
       try { render(await api("/api/config", { method: "POST", body })); }
       catch {
         let mask = 0;
@@ -278,6 +290,10 @@
 
     async function startPairing() {
       $("pairStatus").textContent = "Pairing started. Keep both devices powered in config mode.";
+      if (demoMode) {
+        updatePairStatus({ active: true, hasPeer: true, peerMac: demoConfig.peerMac, message: "Demo pairing complete." });
+        return;
+      }
       try { updatePairStatus(await api("/api/pair/start", { method: "POST" })); }
       catch { updatePairStatus({ active: true, hasPeer: true, peerMac: demoConfig.peerMac, message: "Demo pairing complete." }); }
     }
@@ -288,10 +304,12 @@
     }
 
     async function pollPairStatus() {
+      if (demoMode) return;
       try { updatePairStatus(await api("/api/pair/status")); } catch {}
     }
 
     async function rebootDevice() {
+      if (demoMode) return;
       try { await api("/api/reboot", { method: "POST" }); } catch {}
     }
 
@@ -305,6 +323,20 @@
       body.set(`overlay${index}Y`, $(`overlay${index}Y`).value);
       body.set(`overlay${index}Closed`, $(`overlay${index}Closed`).value);
       body.set(`overlay${index}Open`, $(`overlay${index}Open`).value);
+      if (demoMode) {
+        const overlays = [...demoConfig.doorOverlays];
+        overlays[index] = {
+          name: body.get(`overlay${index}Name`),
+          width: Number(body.get(`overlay${index}Width`)),
+          height: Number(body.get(`overlay${index}Height`)),
+          x: Number(body.get(`overlay${index}X`)),
+          y: Number(body.get(`overlay${index}Y`)),
+          closed: body.get(`overlay${index}Closed`),
+          open: body.get(`overlay${index}Open`)
+        };
+        render({ ...demoConfig, doorOverlays: overlays });
+        return;
+      }
       try { render(await api("/api/config", { method: "POST", body })); }
       catch {
         const overlays = [...demoConfig.doorOverlays];
@@ -325,6 +357,10 @@
       const body = new URLSearchParams();
       const sound = $(`action${index}Canopy`).value;
       body.set("sound", sound);
+      if (demoMode) {
+        playTonePreview(sound);
+        return;
+      }
       try { await api("/api/sound/demo", { method: "POST", body }); }
       catch { playTonePreview(sound); }
     }
@@ -372,7 +408,7 @@
     $("pairBtn").addEventListener("click", startPairing);
     $("rebootBtn").addEventListener("click", rebootDevice);
     loadConfig();
-    setInterval(pollPairStatus, 2000);
+    if (!demoMode) setInterval(pollPairStatus, 2000);
   </script>
 </body>
 </html>
