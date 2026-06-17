@@ -109,7 +109,7 @@ public:
   void begin(DeviceRole role, const char *defaultName) {
     role_ = role;
     prefs_.begin(roleKey(role), false);
-    deviceName_ = prefs_.getString("name", defaultName);
+    deviceName_ = defaultName;
     hasPeer_ = prefs_.getBool("hasPeer", false);
     prefs_.getBytes("peer", peerMac_, sizeof(peerMac_));
     doorEnabledMask_ = prefs_.getUChar("doorEn", 0);
@@ -142,19 +142,6 @@ public:
 
   String peerMacString() const {
     return hasPeer_ ? macToString(peerMac_) : String("");
-  }
-
-  void setDeviceName(const String &name) {
-    String trimmed = name;
-    trimmed.trim();
-    if (trimmed.length() == 0) {
-      return;
-    }
-    if (trimmed.length() > 31) {
-      trimmed = trimmed.substring(0, 31);
-    }
-    deviceName_ = trimmed;
-    prefs_.putString("name", deviceName_);
   }
 
   void setPeerMac(const uint8_t mac[6]) {

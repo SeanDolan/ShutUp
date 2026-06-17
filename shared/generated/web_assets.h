@@ -39,8 +39,6 @@ static constexpr const char kConfigCabHtml[] = R"SHUTUP_HTML(<!doctype html>
   <main>
     <section>
       <h2>Device</h2>
-      <label for="deviceName">Device name</label>
-      <input id="deviceName" name="deviceName" type="text" maxlength="31" value="ShutUp Cab">
       <div class="grid">
         <div class="status"><div class="muted">Local MAC</div><div id="localMac">Loading...</div></div>
         <div class="status"><div class="muted">Paired peer</div><div id="peerMac">Loading...</div></div>
@@ -65,7 +63,6 @@ static constexpr const char kConfigCabHtml[] = R"SHUTUP_HTML(<!doctype html>
   <script>
     const demoConfig = {
       role: "Cab",
-      deviceName: "ShutUp Cab",
       localMac: "24:6F:28:CA:B0:01",
       hasPeer: true,
       peerMac: "34:85:18:CA:10:02",
@@ -75,7 +72,6 @@ static constexpr const char kConfigCabHtml[] = R"SHUTUP_HTML(<!doctype html>
     const $ = (id) => document.getElementById(id);
 
     function render(config) {
-      $("deviceName").value = config.deviceName || "ShutUp Cab";
       $("localMac").textContent = config.localMac || "Unknown";
       $("peerMac").innerHTML = config.hasPeer ? `<span class="ok">${config.peerMac}</span>` : `<span class="warn">Not paired</span>`;
     }
@@ -99,9 +95,8 @@ static constexpr const char kConfigCabHtml[] = R"SHUTUP_HTML(<!doctype html>
 
     async function saveConfig() {
       const body = new URLSearchParams();
-      body.set("deviceName", $("deviceName").value);
       try { render(await api("/api/config", { method: "POST", body })); }
-      catch { render({ ...demoConfig, deviceName: $("deviceName").value }); }
+      catch { render(demoConfig); }
     }
 
     async function startPairing() {
@@ -187,8 +182,6 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
   <main>
     <section>
       <h2>Device</h2>
-      <label for="deviceName">Device name</label>
-      <input id="deviceName" name="deviceName" type="text" maxlength="31" value="ShutUp Canopy">
       <label for="uteColor">Ute colour</label>
       <select id="uteColor" name="uteColor">
         <option value="black">Black</option>
@@ -273,7 +266,6 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
   <script>
     const demoConfig = {
       role: "Canopy",
-      deviceName: "ShutUp Canopy",
       localMac: "34:85:18:CA:10:02",
       hasPeer: true,
       peerMac: "24:6F:28:CA:B0:01",
@@ -327,7 +319,6 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
     const $ = (id) => document.getElementById(id);
 
     function render(config) {
-      $("deviceName").value = config.deviceName || "ShutUp Canopy";
       $("uteColor").value = config.uteColor || "black";
       $("localMac").textContent = config.localMac || "Unknown";
       $("peerMac").innerHTML = config.hasPeer ? `<span class="ok">${config.peerMac}</span>` : `<span class="warn">Not paired</span>`;
@@ -443,7 +434,6 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
 
     async function saveConfig() {
       const body = new URLSearchParams();
-      body.set("deviceName", $("deviceName").value);
       body.set("uteColor", $("uteColor").value);
       body.set("doorTouched", "on");
       body.set("soundTouched", "on");
@@ -460,7 +450,7 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
       catch {
         let mask = 0;
         for (let i = 0; i < 6; i++) if ($("door" + (i + 1)).checked) mask |= (1 << i);
-        render({ ...demoConfig, deviceName: $("deviceName").value, uteColor: $("uteColor").value, doorEnabledMask: mask });
+        render({ ...demoConfig, uteColor: $("uteColor").value, doorEnabledMask: mask });
       }
     }
 

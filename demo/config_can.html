@@ -57,8 +57,6 @@
   <main>
     <section>
       <h2>Device</h2>
-      <label for="deviceName">Device name</label>
-      <input id="deviceName" name="deviceName" type="text" maxlength="31" value="ShutUp Canopy">
       <label for="uteColor">Ute colour</label>
       <select id="uteColor" name="uteColor">
         <option value="black">Black</option>
@@ -143,7 +141,6 @@
   <script>
     const demoConfig = {
       role: "Canopy",
-      deviceName: "ShutUp Canopy",
       localMac: "34:85:18:CA:10:02",
       hasPeer: true,
       peerMac: "24:6F:28:CA:B0:01",
@@ -197,7 +194,6 @@
     const $ = (id) => document.getElementById(id);
 
     function render(config) {
-      $("deviceName").value = config.deviceName || "ShutUp Canopy";
       $("uteColor").value = config.uteColor || "black";
       $("localMac").textContent = config.localMac || "Unknown";
       $("peerMac").innerHTML = config.hasPeer ? `<span class="ok">${config.peerMac}</span>` : `<span class="warn">Not paired</span>`;
@@ -322,7 +318,6 @@
     }
 
     function saveConfig() {
-      demoState.deviceName = $("deviceName").value;
       demoState.uteColor = $("uteColor").value;
       demoState.doorEnabledMask = readDoorEnabledMask();
       demoState.soundActions = readSoundActions();

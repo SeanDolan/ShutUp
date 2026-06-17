@@ -76,9 +76,6 @@ private:
       server_.send(500, "application/json", "{\"ok\":false}");
       return;
     }
-    if (server_.hasArg("deviceName")) {
-      settings_->setDeviceName(server_.arg("deviceName"));
-    }
     if (role_ == DeviceRole::Canopy) {
       if (server_.hasArg("uteColor")) {
         settings_->setUteColor(server_.arg("uteColor"));
@@ -152,7 +149,6 @@ private:
   String configJson() const {
     String json = "{";
     json += "\"role\":\"" + String(roleName(role_)) + "\",";
-    json += "\"deviceName\":\"" + escapeJson(settings_->deviceName()) + "\",";
     json += "\"localMac\":\"" + (espNow_ ? espNow_->localMacString() : WiFi.macAddress()) + "\",";
     json += "\"hasPeer\":" + String(settings_->hasPeer() ? "true" : "false") + ",";
     json += "\"peerMac\":\"" + settings_->peerMacString() + "\",";
