@@ -83,6 +83,8 @@ The current firmware uses one MCP23008 at I2C address `0x20`.
 MCP23008 PCB requirements:
 
 - Place one `100 nF` ceramic decoupling capacitor between MCP23008 VDD and VSS, physically close to the MCP23008 power pins.
+- Place one `100 nF` ceramic capacitor from each reed input signal to GND on the PCB: GPA0-GND through GPA5-GND.
+- Place the reed input capacitors close to the MCP23008 or reed-switch connector.
 - Provide I2C pull-ups from SDA to 3.3 V and SCL to 3.3 V unless the final PCB design confirms they already exist elsewhere on the same bus.
 - If pull-ups are added on the ShutUp PCB, use `4.7 kOhm` as the starting value for both SDA and SCL.
 - Do not power the MCP23008 from 5 V unless I2C level shifting is also added and approved.
