@@ -80,6 +80,12 @@ private:
       settings_->setDeviceName(server_.arg("deviceName"));
     }
     if (role_ == DeviceRole::Canopy) {
+      if (server_.hasArg("uteColor")) {
+        settings_->setUteColor(server_.arg("uteColor"));
+        if (espNow_) {
+          espNow_->syncUteColor();
+        }
+      }
       if (server_.hasArg("doorTouched")) {
         for (uint8_t i = 0; i < kDoorCount; ++i) {
           const String key = String("door") + String(i + 1);
@@ -150,6 +156,7 @@ private:
     json += "\"localMac\":\"" + (espNow_ ? espNow_->localMacString() : WiFi.macAddress()) + "\",";
     json += "\"hasPeer\":" + String(settings_->hasPeer() ? "true" : "false") + ",";
     json += "\"peerMac\":\"" + settings_->peerMacString() + "\",";
+    json += "\"uteColor\":\"" + escapeJson(settings_->uteColor()) + "\",";
     json += "\"doorEnabledMask\":" + String(settings_->doorEnabledMask()) + ",";
     json += "\"doorOverlays\":[";
     for (uint8_t i = 0; i < kDoorCount; ++i) {

@@ -5,6 +5,7 @@
 #include <esp_lcd_panel_ops.h>
 #include <esp_lcd_panel_vendor.h>
 
+#include "cab_images.h"
 #include "shutup_settings.h"
 
 namespace shutup {
@@ -31,30 +32,28 @@ public:
   }
 
   void showSplash() {
-    fillScreen(kBlack);
-    drawCenteredText("SHUTUP", 52, 3, kWhite);
-    drawCenteredText("STARTING", 94, 2, kWhite);
+    drawImage(kCabStartupImage);
+  }
+
+  void showConnecting() {
+    drawImage(kCabConnectingImage);
   }
 
   void showNormal(const DoorState states[kDoorCount], const SettingsStore &settings, bool linkFresh, uint8_t heartbeatPercent,
-                  uint16_t averageHeartbeatMs) {
-    fillScreen(kBlack);
-    drawText(8, 8, "SHUTUP", 2, kWhite);
-    drawText(194, 8, linkFresh ? "CONNECTED" : "NO LINK", 1, linkFresh ? kGreen : kRed);
-    drawText(194, 24, "HEALTH", 1, kWhite);
-    drawNumber(240, 24, heartbeatPercent, 1, heartbeatPercent >= 80 ? kGreen : kOrange);
-    drawText(258, 24, "%", 1, heartbeatPercent >= 80 ? kGreen : kOrange);
-    drawText(194, 38, "AVG", 1, kWhite);
-    drawNumber(222, 38, averageHeartbeatMs, 1, kWhite);
-    drawText(258, 38, "MS", 1, kWhite);
+                  uint16_t, bool muted) {
+    drawImage(uteImageFor(settings.uteColor()));
+    if (muted) {
+      drawText(113, 8, "M", 3, kWhite);
+    }
+    drawSignalBars(145, 9, linkFresh ? heartbeatPercent : 0);
 
     for (uint8_t i = 0; i < kDoorCount; ++i) {
       const DoorOverlayConfig &overlay = settings.doorOverlay(i);
       const bool configured = overlay.width > 0 && overlay.height > 0;
-      const int x = configured ? overlay.x : 18 + (i % 3) * 98;
-      const int y = configured ? overlay.y : 62 + (i / 3) * 50;
-      const int width = configured ? overlay.width : 78;
-      const int height = configured ? overlay.height : 32;
+      const int x = configured ? overlay.x : 12 + (i % 2) * 78;
+      const int y = configured ? overlay.y : 130 + (i / 2) * 42;
+      const int width = configured ? overlay.width : 58;
+      const int height = configured ? overlay.height : 28;
       const bool enabled = states[i] != DoorState::Disabled;
       const bool doorOpen = states[i] == DoorState::Open;
       const uint16_t color = !enabled ? kDim : rgb565(doorOpen ? overlay.openColor : overlay.closedColor);
@@ -66,8 +65,8 @@ public:
   }
 
 private:
-  static constexpr int kWidth = 320;
-  static constexpr int kHeight = 170;
+  static constexpr int kWidth = kCabImageWidth;
+  static constexpr int kHeight = kCabImageHeight;
   static constexpr uint16_t kBlack = 0x0000;
   static constexpr uint16_t kWhite = 0xFFFF;
   static constexpr uint16_t kRed = 0xF800;
@@ -81,6 +80,28 @@ private:
     const uint8_t g = static_cast<uint8_t>((color >> 8) & 0xFF);
     const uint8_t b = static_cast<uint8_t>(color & 0xFF);
     return static_cast<uint16_t>(((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3));
+  }
+
+  static const uint16_t *uteImageFor(const String &color) {
+    if (color == "white") {
+      return kCabUteWhiteImage;
+    }
+    if (color == "gray") {
+      return kCabUteGrayImage;
+    }
+    if (color == "red") {
+      return kCabUteRedImage;
+    }
+    if (color == "blue") {
+      return kCabUteBlueImage;
+    }
+    if (color == "green") {
+      return kCabUteGreenImage;
+    }
+    if (color == "yellow") {
+      return kCabUteYellowImage;
+    }
+    return kCabUteBlackImage;
   }
 
   struct LcdCommand {
@@ -142,9 +163,9 @@ private:
     esp_lcd_panel_reset(panel_);
     esp_lcd_panel_init(panel_);
     esp_lcd_panel_invert_color(panel_, true);
-    esp_lcd_panel_swap_xy(panel_, true);
-    esp_lcd_panel_mirror(panel_, false, true);
-    esp_lcd_panel_set_gap(panel_, 0, 35);
+    esp_lcd_panel_swap_xy(panel_, false);
+    esp_lcd_panel_mirror(panel_, false, false);
+    esp_lcd_panel_set_gap(panel_, 35, 0);
 
     static constexpr LcdCommand initCommands[] = {
         {0x11, {0}, 0x80},
@@ -176,6 +197,18 @@ private:
     fillRect(0, 0, kWidth, kHeight, color);
   }
 
+  void drawImage(const uint16_t *image) {
+    if (!panel_ || !image) {
+      return;
+    }
+    for (int y = 0; y < kHeight; ++y) {
+      for (int x = 0; x < kWidth; ++x) {
+        line_[x] = pgm_read_word(&image[y * kWidth + x]);
+      }
+      esp_lcd_panel_draw_bitmap(panel_, 0, y, kWidth, y + 1, line_);
+    }
+  }
+
   void fillRect(int x, int y, int w, int h, uint16_t color) {
     if (!panel_ || w <= 0 || h <= 0) {
       return;
@@ -201,6 +234,15 @@ private:
     char text[8];
     snprintf(text, sizeof(text), "%u", value);
     drawText(x, y, text, scale, color);
+  }
+
+  void drawSignalBars(int x, int y, uint8_t heartbeatPercent) {
+    const uint8_t bars = heartbeatPercent >= 80 ? 3 : (heartbeatPercent >= 45 ? 2 : (heartbeatPercent > 0 ? 1 : 0));
+    for (uint8_t i = 0; i < 3; ++i) {
+      const int barHeight = 7 + i * 5;
+      const int barY = y + (17 - barHeight);
+      fillRect(x + i * 7, barY, 5, barHeight, i < bars ? kWhite : kDim);
+    }
   }
 
   void drawText(int x, int y, const char *text, int scale, uint16_t color) {

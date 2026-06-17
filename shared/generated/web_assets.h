@@ -189,6 +189,16 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
       <h2>Device</h2>
       <label for="deviceName">Device name</label>
       <input id="deviceName" name="deviceName" type="text" maxlength="31" value="ShutUp Canopy">
+      <label for="uteColor">Ute colour</label>
+      <select id="uteColor" name="uteColor">
+        <option value="black">Black</option>
+        <option value="white">White</option>
+        <option value="gray">Gray</option>
+        <option value="red">Red</option>
+        <option value="blue">Blue</option>
+        <option value="green">Green</option>
+        <option value="yellow">Yellow</option>
+      </select>
       <div class="grid">
         <div class="status"><div class="muted">Local MAC</div><div id="localMac">Loading...</div></div>
         <div class="status"><div class="muted">Paired peer</div><div id="peerMac">Loading...</div></div>
@@ -267,6 +277,7 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
       localMac: "34:85:18:CA:10:02",
       hasPeer: true,
       peerMac: "24:6F:28:CA:B0:01",
+      uteColor: "black",
       doorEnabledMask: 0b00111111,
       doorOverlays: [
         { name: "Door #1", width: 0, height: 0, x: 0, y: 0, closed: "#00FF00", open: "#FF0000" },
@@ -317,6 +328,7 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
 
     function render(config) {
       $("deviceName").value = config.deviceName || "ShutUp Canopy";
+      $("uteColor").value = config.uteColor || "black";
       $("localMac").textContent = config.localMac || "Unknown";
       $("peerMac").innerHTML = config.hasPeer ? `<span class="ok">${config.peerMac}</span>` : `<span class="warn">Not paired</span>`;
       for (let i = 0; i < 6; i++) {
@@ -356,10 +368,10 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
         <tr>
           <td class="num-col">${index + 1}</td>
           <td><input id="overlay${index}Name" type="text" maxlength="31" value="${escapeAttr(overlay.name || `Door #${index + 1}`)}"></td>
-          <td><input id="overlay${index}Width" type="number" min="0" max="320" value="${overlay.width || 0}"></td>
-          <td><input id="overlay${index}Height" type="number" min="0" max="170" value="${overlay.height || 0}"></td>
-          <td><input id="overlay${index}X" type="number" min="0" max="320" value="${overlay.x || 0}"></td>
-          <td><input id="overlay${index}Y" type="number" min="0" max="170" value="${overlay.y || 0}"></td>
+          <td><input id="overlay${index}Width" type="number" min="0" max="170" value="${overlay.width || 0}"></td>
+          <td><input id="overlay${index}Height" type="number" min="0" max="320" value="${overlay.height || 0}"></td>
+          <td><input id="overlay${index}X" type="number" min="0" max="170" value="${overlay.x || 0}"></td>
+          <td><input id="overlay${index}Y" type="number" min="0" max="320" value="${overlay.y || 0}"></td>
           <td><input id="overlay${index}Closed" type="color" value="${overlay.closed || "#00FF00"}"></td>
           <td><input id="overlay${index}Open" type="color" value="${overlay.open || "#FF0000"}"></td>
           <td><button type="button" data-overlay-save="${index}">Save</button></td>
@@ -432,6 +444,7 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
     async function saveConfig() {
       const body = new URLSearchParams();
       body.set("deviceName", $("deviceName").value);
+      body.set("uteColor", $("uteColor").value);
       body.set("doorTouched", "on");
       body.set("soundTouched", "on");
       for (let i = 1; i <= 6; i++) {
@@ -447,7 +460,7 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
       catch {
         let mask = 0;
         for (let i = 0; i < 6; i++) if ($("door" + (i + 1)).checked) mask |= (1 << i);
-        render({ ...demoConfig, deviceName: $("deviceName").value, doorEnabledMask: mask });
+        render({ ...demoConfig, deviceName: $("deviceName").value, uteColor: $("uteColor").value, doorEnabledMask: mask });
       }
     }
 

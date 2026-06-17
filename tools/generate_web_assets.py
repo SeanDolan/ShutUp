@@ -87,6 +87,7 @@ CAN_DEVICE_TRANSPORT = """    const shouldPollPairStatus = true;
     async function saveConfig() {
       const body = new URLSearchParams();
       body.set("deviceName", $("deviceName").value);
+      body.set("uteColor", $("uteColor").value);
       body.set("doorTouched", "on");
       body.set("soundTouched", "on");
       for (let i = 1; i <= 6; i++) {
@@ -102,7 +103,7 @@ CAN_DEVICE_TRANSPORT = """    const shouldPollPairStatus = true;
       catch {
         let mask = 0;
         for (let i = 0; i < 6; i++) if ($("door" + (i + 1)).checked) mask |= (1 << i);
-        render({ ...demoConfig, deviceName: $("deviceName").value, doorEnabledMask: mask });
+        render({ ...demoConfig, deviceName: $("deviceName").value, uteColor: $("uteColor").value, doorEnabledMask: mask });
       }
     }
 
@@ -177,6 +178,7 @@ CAN_DEMO_TRANSPORT = """    const shouldPollPairStatus = false;
 
     function saveConfig() {
       demoState.deviceName = $("deviceName").value;
+      demoState.uteColor = $("uteColor").value;
       demoState.doorEnabledMask = readDoorEnabledMask();
       demoState.soundActions = readSoundActions();
       render(demoState);

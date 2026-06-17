@@ -59,6 +59,7 @@ void startNormalMode() {
   display.showSplash();
   soundPlayer.trigger(shutup::SoundAction::Startup);
   espNow.begin(shutup::DeviceRole::Cab, settings, false);
+  display.showConnecting();
   if (!settings.hasPeer()) {
     Serial.println("No paired Canopy device stored. Boot with config button held to pair.");
   }
@@ -136,7 +137,7 @@ void updateNormalOperation() {
   updateDoorAlarm(openDoorMask(doorStates), now);
 
   if (now - lastDisplayMs >= 500 || doorStatesChanged || linkFresh != lastLinkFresh) {
-    display.showNormal(doorStates, settings, linkFresh, espNow.heartbeatSuccessPercent(), espNow.averageHeartbeatMs());
+    display.showNormal(doorStates, settings, linkFresh, espNow.heartbeatSuccessPercent(), espNow.averageHeartbeatMs(), muted);
     lastDisplayMs = now;
     memcpy(lastDoorStates, doorStates, sizeof(lastDoorStates));
     lastLinkFresh = linkFresh;

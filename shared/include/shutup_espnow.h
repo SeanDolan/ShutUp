@@ -21,6 +21,7 @@ enum class PacketType : uint8_t {
 enum class ConfigSyncKind : uint8_t {
   SoundAction = 1,
   DoorOverlay = 2,
+  UteColor = 3,
 };
 
 struct ShutupPacket {
@@ -49,7 +50,10 @@ struct ShutupPacket {
   char overlayName[24];
   char cabSound[24];
   char canopySound[24];
+  char uteColor[12];
 };
+
+static_assert(sizeof(ShutupPacket) <= 250, "ESP-NOW packet must fit the standard payload limit");
 
 class EspNowManager {
 public:
@@ -94,10 +98,12 @@ public:
         lastConfigSyncMs_ = now;
         if (nextConfigSyncSlot_ < kSoundActionCount) {
           sendSoundActionConfig(settings_->peerMac(), nextConfigSyncSlot_);
-        } else {
+        } else if (nextConfigSyncSlot_ < kSoundActionCount + kDoorCount) {
           sendDoorOverlayConfig(settings_->peerMac(), static_cast<uint8_t>(nextConfigSyncSlot_ - kSoundActionCount));
+        } else {
+          sendUteColorConfig(settings_->peerMac());
         }
-        nextConfigSyncSlot_ = static_cast<uint8_t>((nextConfigSyncSlot_ + 1) % (kSoundActionCount + kDoorCount));
+        nextConfigSyncSlot_ = static_cast<uint8_t>((nextConfigSyncSlot_ + 1) % (kSoundActionCount + kDoorCount + 1));
       }
     }
   }
@@ -143,6 +149,12 @@ public:
   void syncDoorOverlay(uint8_t index) {
     if (settings_ && settings_->hasPeer()) {
       sendDoorOverlayConfig(settings_->peerMac(), index);
+    }
+  }
+
+  void syncUteColor() {
+    if (settings_ && settings_->hasPeer()) {
+      sendUteColorConfig(settings_->peerMac());
     }
   }
 
@@ -217,6 +229,11 @@ private:
         packet.configIndex < kDoorCount) {
       settings_->setDoorOverlay(packet.configIndex, packet.overlayName, packet.overlayWidth, packet.overlayHeight,
                                 packet.overlayX, packet.overlayY, packet.overlayClosedColor, packet.overlayOpenColor);
+      return;
+    }
+    if (type == PacketType::ConfigSync && role_ == DeviceRole::Cab &&
+        packet.configKind == static_cast<uint8_t>(ConfigSyncKind::UteColor)) {
+      settings_->setUteColor(packet.uteColor);
       return;
     }
   }
@@ -322,6 +339,17 @@ private:
     packet.overlayClosedColor = overlay.closedColor;
     packet.overlayOpenColor = overlay.openColor;
     strlcpy(packet.overlayName, overlay.name.c_str(), sizeof(packet.overlayName));
+    esp_now_send(mac, reinterpret_cast<uint8_t *>(&packet), sizeof(packet));
+  }
+
+  void sendUteColorConfig(const uint8_t mac[6]) {
+    if (!settings_) {
+      return;
+    }
+    ShutupPacket packet{};
+    fillPacket(packet, PacketType::ConfigSync);
+    packet.configKind = static_cast<uint8_t>(ConfigSyncKind::UteColor);
+    strlcpy(packet.uteColor, settings_->uteColor().c_str(), sizeof(packet.uteColor));
     esp_now_send(mac, reinterpret_cast<uint8_t *>(&packet), sizeof(packet));
   }
 

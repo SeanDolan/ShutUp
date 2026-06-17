@@ -13,6 +13,7 @@ enum class DeviceRole : uint8_t {
 constexpr uint8_t kDoorCount = 6;
 constexpr uint8_t kSoundActionCount = 5;
 constexpr const char *kNoSoundName = "None";
+constexpr const char *kDefaultUteColor = "black";
 
 enum class DoorState : uint8_t {
   Disabled = 0,
@@ -112,6 +113,7 @@ public:
     hasPeer_ = prefs_.getBool("hasPeer", false);
     prefs_.getBytes("peer", peerMac_, sizeof(peerMac_));
     doorEnabledMask_ = prefs_.getUChar("doorEn", 0);
+    uteColor_ = cleanUteColor(prefs_.getString("uteColor", kDefaultUteColor));
     for (uint8_t i = 0; i < kSoundActionCount; ++i) {
       soundActions_[i].cabSound = prefs_.getString(soundKey(i, "cab").c_str(), kNoSoundName);
       soundActions_[i].canopySound = prefs_.getString(soundKey(i, "can").c_str(), kNoSoundName);
@@ -136,6 +138,7 @@ public:
   uint8_t doorEnabledMask() const { return doorEnabledMask_; }
   const SoundActionConfig &soundAction(uint8_t index) const { return soundActions_[index]; }
   const DoorOverlayConfig &doorOverlay(uint8_t index) const { return doorOverlays_[index]; }
+  const String &uteColor() const { return uteColor_; }
 
   String peerMacString() const {
     return hasPeer_ ? macToString(peerMac_) : String("");
@@ -224,6 +227,11 @@ public:
     prefs_.putUInt(doorKey(index, "open").c_str(), doorOverlays_[index].openColor);
   }
 
+  void setUteColor(const String &color) {
+    uteColor_ = cleanUteColor(color);
+    prefs_.putString("uteColor", uteColor_);
+  }
+
 private:
   static String soundKey(uint8_t index, const char *suffix) {
     return String("a") + String(index) + suffix;
@@ -261,9 +269,21 @@ private:
     return out;
   }
 
+  static String cleanUteColor(const String &color) {
+    String out = color;
+    out.trim();
+    out.toLowerCase();
+    if (out == "black" || out == "white" || out == "gray" || out == "red" ||
+        out == "blue" || out == "green" || out == "yellow") {
+      return out;
+    }
+    return kDefaultUteColor;
+  }
+
   Preferences prefs_;
   DeviceRole role_{DeviceRole::Cab};
   String deviceName_;
+  String uteColor_{kDefaultUteColor};
   uint8_t peerMac_[6]{};
   bool hasPeer_{false};
   uint8_t doorEnabledMask_{0};

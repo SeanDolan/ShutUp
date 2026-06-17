@@ -63,7 +63,7 @@ Project GPIO assignments are listed in the selected pin assignments section belo
 - Canopy config includes the action sound table for Startup, Connectivity success, Connectivity error, Doors ok, and Door alarm.
 - In the action sound table, `Repeat` is an on/off checkbox and `Delay` is the delay between repeats.
 - Sound dropdowns are generated from the shared tone library in `shared/include/shutup_sounds.h`.
-- Cab placeholder images are stored in `Cab/data/images/` as `startup.png`, `connecting.png`, and `background.png`.
+- Cab images are stored in `Cab/data/images/` as `startup.png`, `connecting.png`, and `ute_<colour>.png` for black, white, gray, red, blue, green, and yellow.
 - Canopy config owns the Cab door overlay rectangle settings and syncs them to the Cab over ESP-NOW.
 
 ## Selected Pin Assignments
