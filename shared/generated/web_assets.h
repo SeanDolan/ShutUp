@@ -182,6 +182,19 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
   <main>
     <section>
       <h2>Device</h2>
+      <div class="grid">
+        <div class="status"><div class="muted">Local MAC</div><div id="localMac">Loading...</div></div>
+        <div class="status"><div class="muted">Paired peer</div><div id="peerMac">Loading...</div></div>
+      </div>
+      <p class="muted">The Canopy device stores door state and responds to Cab state requests over ESP-NOW.</p>
+      <div class="row">
+        <button id="saveBtn">Save config</button>
+        <button id="rebootBtn" class="secondary">Reboot</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Ute Display</h2>
       <label for="uteColor">Ute colour</label>
       <select id="uteColor" name="uteColor">
         <option value="black">Black</option>
@@ -192,15 +205,6 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
         <option value="green">Green</option>
         <option value="yellow">Yellow</option>
       </select>
-      <div class="grid">
-        <div class="status"><div class="muted">Local MAC</div><div id="localMac">Loading...</div></div>
-        <div class="status"><div class="muted">Paired peer</div><div id="peerMac">Loading...</div></div>
-      </div>
-      <p class="muted">The Canopy device stores door state and responds to Cab state requests over ESP-NOW.</p>
-      <div class="row">
-        <button id="saveBtn">Save config</button>
-        <button id="rebootBtn" class="secondary">Reboot</button>
-      </div>
     </section>
 
     <section>
