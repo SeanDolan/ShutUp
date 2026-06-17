@@ -63,7 +63,6 @@ Detailed wiring notes are in [docs/wiring.md](docs/wiring.md).
 - Cab display assets are treated as portrait `170x320`; overlay `X` and `Y` positions are measured from the top-left of that portrait image as `(0,0)`.
 - Cab sends a non-blocking ESP-NOW heartbeat request every 1 second; Canopy replies with a six-entry physical door-state array.
 - Cab connection health uses heartbeat success rate and average round-trip time from the last 5 successful heartbeats.
-- ESP-NOW RSSI is not available through the receive callback exposed by the current local Arduino/ESP32 framework.
 - Canopy reads physical door state through MCP23008 GPA0-GPA5 and reports enabled door states over ESP-NOW.
 - Canopy drives the 8 WS2812S LEDs as power, connectivity, and six door state indicators.
 - Canopy config includes the action sound table for Startup, Connectivity success, Connectivity error, Doors ok, and Door alarm.

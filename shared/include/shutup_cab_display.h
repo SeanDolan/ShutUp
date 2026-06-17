@@ -43,7 +43,7 @@ public:
     if (muted) {
       drawText(113, 8, "M", 3, kWhite);
     }
-    drawSignalBars(145, 9, linkFresh ? heartbeatPercent : 0);
+    drawHeartbeatBars(145, 9, linkFresh ? heartbeatPercent : 0);
 
     for (uint8_t i = 0; i < kDoorCount; ++i) {
       const DoorOverlayConfig &overlay = settings.doorOverlay(i);
@@ -234,7 +234,7 @@ private:
     drawText(x, y, text, scale, color);
   }
 
-  void drawSignalBars(int x, int y, uint8_t heartbeatPercent) {
+  void drawHeartbeatBars(int x, int y, uint8_t heartbeatPercent) {
     const uint8_t bars = heartbeatPercent >= 80 ? 3 : (heartbeatPercent >= 45 ? 2 : (heartbeatPercent > 0 ? 1 : 0));
     for (uint8_t i = 0; i < 3; ++i) {
       const int barHeight = 7 + i * 5;
