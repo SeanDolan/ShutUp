@@ -6,7 +6,7 @@
 #include <WiFi.h>
 
 #include "shutup_espnow.h"
-#include "shutup_sound.h"
+#include "shutup_sound_player.h"
 #include "web_assets.h"
 
 namespace shutup {

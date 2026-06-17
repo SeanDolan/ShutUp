@@ -10,7 +10,7 @@
 #include "shutup_mcp23008.h"
 #include "shutup_pins.h"
 #include "shutup_settings.h"
-#include "shutup_sound.h"
+#include "shutup_sound_player.h"
 
 namespace {
 

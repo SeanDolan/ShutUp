@@ -9,7 +9,7 @@ except NameError:
 WEB = ROOT / "shared" / "web"
 GENERATED = ROOT / "shared" / "generated"
 DEMO = ROOT / "demo"
-TONES_HEADER = ROOT / "shared" / "include" / "shutup_tones.h"
+TONES_HEADER = ROOT / "shared" / "include" / "shutup_sounds.h"
 
 ASSETS = [
     ("config_cab.html", "kConfigCabHtml"),
