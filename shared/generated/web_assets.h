@@ -7,7 +7,7 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ShutUp Canopy Config</title>
+  <title>ShutUp Config</title>
   <style>
     :root { color-scheme: light; --ink:#172126; --muted:#5e6b73; --line:#cdd6dc; --panel:#f7f9fa; --accent:#0b6bcb; --good:#168447; --warn:#a35a00; }
     * { box-sizing: border-box; }
@@ -55,8 +55,8 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
 </head>
 <body>
   <header>
-    <h1>ShutUp Canopy Config</h1>
-    <div class="muted">SSID: SHUTUP-CANCONF</div>
+    <h1>ShutUp Config</h1>
+    <div class="muted">SSID: SHUTUP-CONFIG</div>
   </header>
   <main>
     <section>
@@ -138,7 +138,7 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
 
     <section>
       <h2>Pair Devices</h2>
-      <p>Boot the Cab with its config button held so it shows the pairing screen. Boot the Canopy with its config button held, connect to SHUTUP-CANCONF, then press Pair Devices.</p>
+      <p>Boot the Cab with its config button held so it shows the pairing screen. Boot the Canopy with its config button held, connect to SHUTUP-CONFIG, then press Pair Devices.</p>
       <div class="status" id="pairStatus">Pairing idle.</div>
       <div class="row" style="margin-top:12px">
         <button id="pairBtn">Pair Devices</button>

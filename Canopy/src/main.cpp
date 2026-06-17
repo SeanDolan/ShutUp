@@ -15,7 +15,7 @@
 namespace {
 
 constexpr const char *kDeviceName = "ShutUp Canopy";
-constexpr const char *kConfigSsid = "SHUTUP-CANCONF";
+constexpr const char *kConfigSsid = "SHUTUP-CONFIG";
 
 constexpr int kConfigButtonGpio = 0;
 constexpr int kMuteButtonGpio = 1;

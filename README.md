@@ -43,7 +43,7 @@ Project GPIO assignments are listed in the selected pin assignments section belo
 - The physical config-button GPIOs are assigned in each device `main.cpp`.
 - Cab config-button boot mode does not start a Wi-Fi access point, a web server, or a captive portal.
 - Cab config-button boot mode displays `pairing.png` and waits for pairing to be initiated from the Canopy config page.
-- Canopy config AP SSID: `SHUTUP-CANCONF`, open network.
+- Canopy config AP SSID: `SHUTUP-CONFIG`, open network.
 - Canopy config mode starts an HTTP config page and DNS captive-portal responder.
 - ESP-NOW pairing scaffolding is implemented:
   - Put the Cab into pairing-listen mode by booting it with its config button held.
@@ -173,7 +173,7 @@ Hardware:
 Config behavior:
 
 - If the config button is detected as held during startup, the Canopy device starts an open Wi-Fi configuration access point.
-- Canopy config SSID: `SHUTUP-CANCONF`
+- Canopy config SSID: `SHUTUP-CONFIG`
 - Canopy config AP password: none.
 - The config AP presents a captive portal for Canopy device configuration.
 
