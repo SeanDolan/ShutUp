@@ -58,8 +58,7 @@ private:
   }
 
   void serveIndex() {
-    const char *html = role_ == DeviceRole::Cab ? kConfigCabHtml : kConfigCanHtml;
-    server_.send(200, "text/html", html);
+    server_.send(200, "text/html", kConfigCanHtml);
   }
 
   void redirectHome() {

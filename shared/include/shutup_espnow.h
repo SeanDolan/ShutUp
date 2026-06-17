@@ -61,7 +61,7 @@ public:
     role_ = role;
     settings_ = &settings;
     configMode_ = configMode;
-    WiFi.mode(configMode ? WIFI_AP_STA : WIFI_STA);
+    WiFi.mode(configMode && role == DeviceRole::Canopy ? WIFI_AP_STA : WIFI_STA);
     WiFi.setSleep(false);
     localMac_ = WiFi.macAddress();
     if (esp_now_init() != ESP_OK) {
@@ -80,6 +80,9 @@ public:
 
   void loop() {
     const uint32_t now = millis();
+    if (pairingRebootAtMs_ != 0 && static_cast<int32_t>(now - pairingRebootAtMs_) >= 0) {
+      ESP.restart();
+    }
     if (pairingActive_ && now < pairingUntilMs_ && now - lastPairBroadcastMs_ >= 1000) {
       lastPairBroadcastMs_ = now;
       sendPairRequest();
@@ -190,6 +193,7 @@ private:
       lastPairMessage_ = String("Paired with ") + roleName(static_cast<DeviceRole>(packet.role)) +
                          " " + macToString(senderMac);
       sendPairAck(senderMac);
+      schedulePairingReboot();
       return;
     }
     if (type == PacketType::PairAck && configMode_) {
@@ -198,6 +202,7 @@ private:
       pairingActive_ = false;
       lastPairMessage_ = String("Pairing complete with ") + roleName(static_cast<DeviceRole>(packet.role)) +
                          " " + macToString(senderMac);
+      schedulePairingReboot();
       return;
     }
     if (type == PacketType::HeartbeatRequest && role_ == DeviceRole::Canopy) {
@@ -281,6 +286,12 @@ private:
     ShutupPacket packet{};
     fillPacket(packet, PacketType::PairAck);
     esp_now_send(mac, reinterpret_cast<uint8_t *>(&packet), sizeof(packet));
+  }
+
+  void schedulePairingReboot() {
+    if (pairingRebootAtMs_ == 0) {
+      pairingRebootAtMs_ = millis() + 1000;
+    }
   }
 
   void sendHeartbeatRequest() {
@@ -396,6 +407,7 @@ private:
   bool configMode_{false};
   bool pairingActive_{false};
   uint32_t pairingUntilMs_{0};
+  uint32_t pairingRebootAtMs_{0};
   uint32_t lastPairBroadcastMs_{0};
   uint32_t lastStateRequestMs_{0};
   uint32_t lastStateMessageMs_{0};

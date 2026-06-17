@@ -25,10 +25,8 @@ public:
     return true;
   }
 
-  void showConfigMode() {
-    fillScreen(kBlack);
-    drawCenteredText("SHUTUP", 48, 3, kWhite);
-    drawCenteredText("CONFIG MODE", 88, 2, kWhite);
+  void showPairing() {
+    drawImage(kCabPairingImage);
   }
 
   void showSplash() {

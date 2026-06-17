@@ -12,62 +12,8 @@ DEMO = ROOT / "demo"
 TONES_HEADER = ROOT / "shared" / "include" / "shutup_sounds.h"
 
 ASSETS = [
-    ("config_cab.html", "kConfigCabHtml"),
     ("config_can.html", "kConfigCanHtml"),
 ]
-
-CAB_DEVICE_TRANSPORT = """    const shouldPollPairStatus = true;
-
-    async function api(path, options) {
-      const response = await fetch(path, options);
-      if (!response.ok) throw new Error("Request failed");
-      return response.json();
-    }
-
-    async function loadConfig() {
-      try { render(await api("/api/config")); }
-      catch { render(demoConfig); }
-    }
-
-    async function saveConfig() {
-      const body = new URLSearchParams();
-      try { render(await api("/api/config", { method: "POST", body })); }
-      catch { render(demoConfig); }
-    }
-
-    async function startPairing() {
-      $("pairStatus").textContent = "Pairing started. Keep both devices powered in config mode.";
-      try { updatePairStatus(await api("/api/pair/start", { method: "POST" })); }
-      catch { updatePairStatus({ active: true, hasPeer: true, peerMac: demoConfig.peerMac, message: "Demo pairing complete." }); }
-    }
-
-    async function pollPairStatus() {
-      try { updatePairStatus(await api("/api/pair/status")); } catch {}
-    }
-
-    async function rebootDevice() {
-      try { await api("/api/reboot", { method: "POST" }); } catch {}
-    }"""
-
-CAB_DEMO_TRANSPORT = """    const shouldPollPairStatus = false;
-    let demoState = JSON.parse(JSON.stringify(demoConfig));
-
-    function loadConfig() {
-      render(demoState);
-    }
-
-    function saveConfig() {
-      render(demoState);
-    }
-
-    function startPairing() {
-      $("pairStatus").textContent = "Pairing started. Keep both devices powered in config mode.";
-      updatePairStatus({ active: true, hasPeer: true, peerMac: demoState.peerMac, message: "Demo pairing complete." });
-    }
-
-    function pollPairStatus() {}
-
-    function rebootDevice() {}"""
 
 CAN_DEVICE_TRANSPORT = """    const shouldPollPairStatus = true;
 
@@ -265,9 +211,7 @@ def inject_sound_options(filename, text, sounds):
 
 
 def inject_transport(filename, text, demo):
-    if filename == "config_cab.html":
-        transport = CAB_DEMO_TRANSPORT if demo else CAB_DEVICE_TRANSPORT
-    elif filename == "config_can.html":
+    if filename == "config_can.html":
         transport = CAN_DEMO_TRANSPORT if demo else CAN_DEVICE_TRANSPORT
     else:
         raise ValueError(f"No transport for {filename}")

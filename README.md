@@ -38,23 +38,27 @@ Project GPIO assignments are listed in the selected pin assignments section belo
 
 ## Current Firmware Status
 
-- Both devices have startup branching for config mode vs normal ESP-NOW mode.
-- Config mode is entered when the device config button is held at boot.
+- Both devices have startup branching for config/pairing mode vs normal ESP-NOW mode.
+- Config/pairing mode is entered when the device config button is held at boot.
 - The physical config-button GPIOs are assigned in each device `main.cpp`.
-- Cab config AP SSID: `SHUTUP-CABCONF`, open network.
+- Cab config-button boot mode does not start a Wi-Fi access point, a web server, or a captive portal.
+- Cab config-button boot mode displays `pairing.png` and waits for pairing to be initiated from the Canopy config page.
 - Canopy config AP SSID: `SHUTUP-CANCONF`, open network.
-- Config mode starts an HTTP config page and DNS captive-portal responder.
+- Canopy config mode starts an HTTP config page and DNS captive-portal responder.
 - ESP-NOW pairing scaffolding is implemented:
-  - Put both devices into config mode.
-  - Connect to either config AP.
-  - Press `Pair Devices`.
-  - The device whose page is open broadcasts a pairing request.
-  - The other device can respond without its page being open.
+  - Put the Cab into pairing-listen mode by booting it with its config button held.
+  - Put the Canopy into config mode by booting it with its config button held.
+  - Connect to the Canopy config AP.
+  - Press `Pair Devices` on the Canopy config page.
+  - The Canopy broadcasts a pairing request.
+  - The Cab responds without running a Wi-Fi server or config page.
   - The peer MAC is stored in non-volatile preferences.
+  - After pairing completes, both devices reboot to leave config/pairing mode cleanly.
 - Normal mode initializes ESP-NOW:
   - Canopy acts as the always-powered state holder.
   - Cab acts as the state client and periodically requests Canopy state.
 - Cab blacks out the T-Display-S3 screen immediately at startup, then shows config mode or normal status screens.
+- Cab display assets are treated as portrait `170x320`; overlay `X` and `Y` positions are measured from the top-left of that portrait image as `(0,0)`.
 - Cab sends a non-blocking ESP-NOW heartbeat request every 1 second; Canopy replies with a six-entry physical door-state array.
 - Cab connection health uses heartbeat success rate and average round-trip time from the last 5 successful heartbeats.
 - ESP-NOW RSSI is not available through the receive callback exposed by the current local Arduino/ESP32 framework.
@@ -63,7 +67,7 @@ Project GPIO assignments are listed in the selected pin assignments section belo
 - Canopy config includes the action sound table for Startup, Connectivity success, Connectivity error, Doors ok, and Door alarm.
 - In the action sound table, `Repeat` is an on/off checkbox and `Delay` is the delay between repeats.
 - Sound dropdowns are generated from the shared tone library in `shared/include/shutup_sounds.h`.
-- Cab images are stored in `Cab/data/images/` as `startup.png`, `connecting.png`, and `ute_<colour>.png` for black, white, gray, red, blue, green, and yellow.
+- Cab images are stored in `Cab/data/images/` as `startup.png`, `connecting.png`, `pairing.png`, and `ute_<colour>.png` for black, white, gray, red, blue, green, and yellow.
 - Canopy config owns the Cab door overlay rectangle settings and syncs them to the Cab over ESP-NOW.
 
 ## Selected Pin Assignments
@@ -99,15 +103,13 @@ MCP23008 wiring required by the current code:
 
 ## Config Page Demos
 
-The real config pages are stored in `shared/web/` and are the source of truth:
+The real Canopy config page is stored in `shared/web/` and is the source of truth:
 
-- `shared/web/config_cab.html`
 - `shared/web/config_can.html`
 
-The firmware header and demo files are generated from those source pages:
+The firmware header and demo file are generated from that source page:
 
 - `shared/generated/web_assets.h`
-- `demo/config_cab.html`
 - `demo/config_can.html`
 
 Run this after editing files in `shared/web/`:
@@ -142,10 +144,10 @@ Hardware:
 
 Config behavior:
 
-- If the config button is detected as held during startup, the Cab device starts an open Wi-Fi configuration access point.
-- Cab config SSID: `SHUTUP-CABCONF`
-- Cab config AP password: none.
-- The config AP presents a captive portal for Cab device configuration.
+- If the config button is detected as held during startup, the Cab device enters pairing-listen mode.
+- Cab pairing-listen mode displays `pairing.png`.
+- Cab pairing-listen mode does not start a Wi-Fi access point, a web server, or a captive portal.
+- Pairing is initiated from the Canopy config page.
 
 ### Canopy Requirements
 
@@ -197,6 +199,7 @@ Sources used for this first pin reference:
 
 - LilyGO T-Display-S3 official pin map: https://raw.githubusercontent.com/Xinyuan-LilyGO/T-Display-S3/main/image/T-DISPLAY-S3.jpg
 - LilyGO T-Display-S3 README and hardware notes: https://github.com/Xinyuan-LilyGO/T-Display-S3
+- LilyGO T-Display-S3 factory LCD setup reference: https://github.com/Xinyuan-LilyGO/T-Display-S3/blob/main/example/factory/factory.ino
 - TENSTAR ROBOT ESP32-C3 SuperMini Plus public reference: https://www.espboards.dev/esp32/esp32-c3-super-mini-plus/
 - Jaycar XC3744 datasheet: https://media.jaycar.com.au/product/resources/XC3744_datasheetMain_112903.pdf
 - Jaycar XC4380 manual: https://media.jaycar.com.au/product/resources/XC4380_manualMain_78735.pdf

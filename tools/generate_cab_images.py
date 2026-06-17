@@ -18,6 +18,7 @@ DISPLAY_HEIGHT = 320
 IMAGES = [
     ("startup.png", "kCabStartupImage"),
     ("connecting.png", "kCabConnectingImage"),
+    ("pairing.png", "kCabPairingImage"),
     ("ute_black.png", "kCabUteBlackImage"),
     ("ute_white.png", "kCabUteWhiteImage"),
     ("ute_gray.png", "kCabUteGrayImage"),

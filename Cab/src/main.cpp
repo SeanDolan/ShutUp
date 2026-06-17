@@ -1,10 +1,8 @@
 #include <Arduino.h>
-#include <DNSServer.h>
 #include <Preferences.h>
-#include <WebServer.h>
+#include <WiFi.h>
 
 #include "shutup_cab_display.h"
-#include "shutup_config_portal.h"
 #include "shutup_espnow.h"
 #include "shutup_pins.h"
 #include "shutup_settings.h"
@@ -13,7 +11,6 @@
 namespace {
 
 constexpr const char *kDeviceName = "ShutUp Cab";
-constexpr const char *kConfigSsid = "SHUTUP-CABCONF";
 
 constexpr int kConfigButtonGpio = 2;
 constexpr int kMuteInputGpio = 1;
@@ -22,7 +19,6 @@ constexpr uint32_t kMuteClearStableMs = 3000;
 
 shutup::SettingsStore settings;
 shutup::EspNowManager espNow;
-shutup::ConfigPortal portal;
 shutup::CabDisplay display;
 shutup::SoundPlayer soundPlayer;
 bool configMode = false;
@@ -43,12 +39,11 @@ void setupHardwarePins() {
 
 void startConfigMode() {
   configMode = true;
-  Serial.println("Starting Cab config mode");
+  Serial.println("Starting Cab pairing listen mode");
   settings.begin(shutup::DeviceRole::Cab, kDeviceName);
   soundPlayer.begin(kSpeakerSignalGpio, shutup::DeviceRole::Cab, settings);
-  display.showConfigMode();
+  display.showPairing();
   espNow.begin(shutup::DeviceRole::Cab, settings, true);
-  portal.begin(shutup::DeviceRole::Cab, settings, espNow, kConfigSsid, &soundPlayer);
 }
 
 void startNormalMode() {
@@ -160,9 +155,7 @@ void setup() {
 }
 
 void loop() {
-  if (configMode) {
-    portal.loop();
-  } else {
+  if (!configMode) {
     updateNormalOperation();
   }
   soundPlayer.loop();
