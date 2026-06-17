@@ -138,7 +138,7 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
 
     <section>
       <h2>Pair Devices</h2>
-      <p>Boot the Cab with its config button held so it shows the pairing screen. Boot the Canopy with its config button held, connect to SHUTUP-CONFIG, then press Pair Devices.</p>
+      <p>To pair a new or existing Cab device, put the Cab device into pairing mode by holding down the pairing button on power up before clicking the Pair Devices button below.</p>
       <div class="status" id="pairStatus">Pairing idle.</div>
       <div class="row" style="margin-top:12px">
         <button id="pairBtn">Pair Devices</button>
