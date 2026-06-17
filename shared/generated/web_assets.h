@@ -73,14 +73,6 @@ static constexpr const char kConfigCabHtml[] = R"SHUTUP_HTML(<!doctype html>
     };
 
     const $ = (id) => document.getElementById(id);
-    const demoMode = window.location.protocol === "file:";
-
-    async function api(path, options) {
-      if (demoMode) throw new Error("Demo mode");
-      const response = await fetch(path, options);
-      if (!response.ok) throw new Error("Request failed");
-      return response.json();
-    }
 
     function render(config) {
       $("deviceName").value = config.deviceName || "ShutUp Cab";
@@ -88,11 +80,19 @@ static constexpr const char kConfigCabHtml[] = R"SHUTUP_HTML(<!doctype html>
       $("peerMac").innerHTML = config.hasPeer ? `<span class="ok">${config.peerMac}</span>` : `<span class="warn">Not paired</span>`;
     }
 
+    function updatePairStatus(status) {
+      const paired = status.hasPeer ? `Paired peer: ${status.peerMac}` : "No peer stored";
+      $("pairStatus").textContent = `${status.message || "Pairing status"} - ${paired}`;
+    }
+    const shouldPollPairStatus = true;
+
+    async function api(path, options) {
+      const response = await fetch(path, options);
+      if (!response.ok) throw new Error("Request failed");
+      return response.json();
+    }
+
     async function loadConfig() {
-      if (demoMode) {
-        render(demoConfig);
-        return;
-      }
       try { render(await api("/api/config")); }
       catch { render(demoConfig); }
     }
@@ -100,36 +100,21 @@ static constexpr const char kConfigCabHtml[] = R"SHUTUP_HTML(<!doctype html>
     async function saveConfig() {
       const body = new URLSearchParams();
       body.set("deviceName", $("deviceName").value);
-      if (demoMode) {
-        render({ ...demoConfig, deviceName: $("deviceName").value });
-        return;
-      }
       try { render(await api("/api/config", { method: "POST", body })); }
       catch { render({ ...demoConfig, deviceName: $("deviceName").value }); }
     }
 
     async function startPairing() {
       $("pairStatus").textContent = "Pairing started. Keep both devices powered in config mode.";
-      if (demoMode) {
-        updatePairStatus({ active: true, hasPeer: true, peerMac: demoConfig.peerMac, message: "Demo pairing complete." });
-        return;
-      }
       try { updatePairStatus(await api("/api/pair/start", { method: "POST" })); }
       catch { updatePairStatus({ active: true, hasPeer: true, peerMac: demoConfig.peerMac, message: "Demo pairing complete." }); }
     }
 
-    function updatePairStatus(status) {
-      const paired = status.hasPeer ? `Paired peer: ${status.peerMac}` : "No peer stored";
-      $("pairStatus").textContent = `${status.message || "Pairing status"} - ${paired}`;
-    }
-
     async function pollPairStatus() {
-      if (demoMode) return;
       try { updatePairStatus(await api("/api/pair/status")); } catch {}
     }
 
     async function rebootDevice() {
-      if (demoMode) return;
       try { await api("/api/reboot", { method: "POST" }); } catch {}
     }
 
@@ -137,7 +122,7 @@ static constexpr const char kConfigCabHtml[] = R"SHUTUP_HTML(<!doctype html>
     $("pairBtn").addEventListener("click", startPairing);
     $("rebootBtn").addEventListener("click", rebootDevice);
     loadConfig();
-    if (!demoMode) setInterval(pollPairStatus, 2000);
+    if (shouldPollPairStatus) setInterval(pollPairStatus, 2000);
   </script>
 </body>
 </html>
@@ -329,14 +314,6 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
     };
 
     const $ = (id) => document.getElementById(id);
-    const demoMode = window.location.protocol === "file:";
-
-    async function api(path, options) {
-      if (demoMode) throw new Error("Demo mode");
-      const response = await fetch(path, options);
-      if (!response.ok) throw new Error("Request failed");
-      return response.json();
-    }
 
     function render(config) {
       $("deviceName").value = config.deviceName || "ShutUp Canopy";
@@ -396,118 +373,9 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
       return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll('"', "&quot;");
     }
 
-    async function loadConfig() {
-      if (demoMode) {
-        render(demoConfig);
-        return;
-      }
-      try { render(await api("/api/config")); }
-      catch { render(demoConfig); }
-    }
-
-    async function saveConfig() {
-      const body = new URLSearchParams();
-      body.set("deviceName", $("deviceName").value);
-      body.set("doorTouched", "on");
-      body.set("soundTouched", "on");
-      for (let i = 1; i <= 6; i++) {
-        if ($("door" + i).checked) body.set("door" + i, "on");
-      }
-      for (let i = 0; i < demoConfig.soundActions.length; i++) {
-        body.set(`action${i}Cab`, $(`action${i}Cab`).value);
-        body.set(`action${i}Canopy`, $(`action${i}Canopy`).value);
-        if ($(`action${i}Repeat`).checked) body.set(`action${i}Repeat`, "on");
-        body.set(`action${i}Delay`, $(`action${i}Delay`).value);
-      }
-      if (demoMode) {
-        let mask = 0;
-        for (let i = 0; i < 6; i++) if ($("door" + (i + 1)).checked) mask |= (1 << i);
-        render({ ...demoConfig, deviceName: $("deviceName").value, doorEnabledMask: mask });
-        return;
-      }
-      try { render(await api("/api/config", { method: "POST", body })); }
-      catch {
-        let mask = 0;
-        for (let i = 0; i < 6; i++) if ($("door" + (i + 1)).checked) mask |= (1 << i);
-        render({ ...demoConfig, deviceName: $("deviceName").value, doorEnabledMask: mask });
-      }
-    }
-
-    async function startPairing() {
-      $("pairStatus").textContent = "Pairing started. Keep both devices powered in config mode.";
-      if (demoMode) {
-        updatePairStatus({ active: true, hasPeer: true, peerMac: demoConfig.peerMac, message: "Demo pairing complete." });
-        return;
-      }
-      try { updatePairStatus(await api("/api/pair/start", { method: "POST" })); }
-      catch { updatePairStatus({ active: true, hasPeer: true, peerMac: demoConfig.peerMac, message: "Demo pairing complete." }); }
-    }
-
     function updatePairStatus(status) {
       const paired = status.hasPeer ? `Paired peer: ${status.peerMac}` : "No peer stored";
       $("pairStatus").textContent = `${status.message || "Pairing status"} - ${paired}`;
-    }
-
-    async function pollPairStatus() {
-      if (demoMode) return;
-      try { updatePairStatus(await api("/api/pair/status")); } catch {}
-    }
-
-    async function rebootDevice() {
-      if (demoMode) return;
-      try { await api("/api/reboot", { method: "POST" }); } catch {}
-    }
-
-    async function saveOverlay(index) {
-      const body = new URLSearchParams();
-      body.set(`overlay${index}Touched`, "on");
-      body.set(`overlay${index}Name`, $(`overlay${index}Name`).value || `Door #${index + 1}`);
-      body.set(`overlay${index}Width`, $(`overlay${index}Width`).value);
-      body.set(`overlay${index}Height`, $(`overlay${index}Height`).value);
-      body.set(`overlay${index}X`, $(`overlay${index}X`).value);
-      body.set(`overlay${index}Y`, $(`overlay${index}Y`).value);
-      body.set(`overlay${index}Closed`, $(`overlay${index}Closed`).value);
-      body.set(`overlay${index}Open`, $(`overlay${index}Open`).value);
-      if (demoMode) {
-        const overlays = [...demoConfig.doorOverlays];
-        overlays[index] = {
-          name: body.get(`overlay${index}Name`),
-          width: Number(body.get(`overlay${index}Width`)),
-          height: Number(body.get(`overlay${index}Height`)),
-          x: Number(body.get(`overlay${index}X`)),
-          y: Number(body.get(`overlay${index}Y`)),
-          closed: body.get(`overlay${index}Closed`),
-          open: body.get(`overlay${index}Open`)
-        };
-        render({ ...demoConfig, doorOverlays: overlays });
-        return;
-      }
-      try { render(await api("/api/config", { method: "POST", body })); }
-      catch {
-        const overlays = [...demoConfig.doorOverlays];
-        overlays[index] = {
-          name: body.get(`overlay${index}Name`),
-          width: Number(body.get(`overlay${index}Width`)),
-          height: Number(body.get(`overlay${index}Height`)),
-          x: Number(body.get(`overlay${index}X`)),
-          y: Number(body.get(`overlay${index}Y`)),
-          closed: body.get(`overlay${index}Closed`),
-          open: body.get(`overlay${index}Open`)
-        };
-        render({ ...demoConfig, doorOverlays: overlays });
-      }
-    }
-
-    async function demoSound(index) {
-      const body = new URLSearchParams();
-      const sound = $(`action${index}Canopy`).value;
-      body.set("sound", sound);
-      if (demoMode) {
-        playTonePreview(sound);
-        return;
-      }
-      try { await api("/api/sound/demo", { method: "POST", body }); }
-      catch { playTonePreview(sound); }
     }
 
     let previewAudio = null;
@@ -548,12 +416,92 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
         when += duration;
       });
     }
+    const shouldPollPairStatus = true;
+
+    async function api(path, options) {
+      const response = await fetch(path, options);
+      if (!response.ok) throw new Error("Request failed");
+      return response.json();
+    }
+
+    async function loadConfig() {
+      try { render(await api("/api/config")); }
+      catch { render(demoConfig); }
+    }
+
+    async function saveConfig() {
+      const body = new URLSearchParams();
+      body.set("deviceName", $("deviceName").value);
+      body.set("doorTouched", "on");
+      body.set("soundTouched", "on");
+      for (let i = 1; i <= 6; i++) {
+        if ($("door" + i).checked) body.set("door" + i, "on");
+      }
+      for (let i = 0; i < demoConfig.soundActions.length; i++) {
+        body.set(`action${i}Cab`, $(`action${i}Cab`).value);
+        body.set(`action${i}Canopy`, $(`action${i}Canopy`).value);
+        if ($(`action${i}Repeat`).checked) body.set(`action${i}Repeat`, "on");
+        body.set(`action${i}Delay`, $(`action${i}Delay`).value);
+      }
+      try { render(await api("/api/config", { method: "POST", body })); }
+      catch {
+        let mask = 0;
+        for (let i = 0; i < 6; i++) if ($("door" + (i + 1)).checked) mask |= (1 << i);
+        render({ ...demoConfig, deviceName: $("deviceName").value, doorEnabledMask: mask });
+      }
+    }
+
+    async function startPairing() {
+      $("pairStatus").textContent = "Pairing started. Keep both devices powered in config mode.";
+      try { updatePairStatus(await api("/api/pair/start", { method: "POST" })); }
+      catch { updatePairStatus({ active: true, hasPeer: true, peerMac: demoConfig.peerMac, message: "Demo pairing complete." }); }
+    }
+
+    async function pollPairStatus() {
+      try { updatePairStatus(await api("/api/pair/status")); } catch {}
+    }
+
+    async function rebootDevice() {
+      try { await api("/api/reboot", { method: "POST" }); } catch {}
+    }
+
+    async function saveOverlay(index) {
+      const body = new URLSearchParams();
+      body.set(`overlay${index}Touched`, "on");
+      body.set(`overlay${index}Name`, $(`overlay${index}Name`).value || `Door #${index + 1}`);
+      body.set(`overlay${index}Width`, $(`overlay${index}Width`).value);
+      body.set(`overlay${index}Height`, $(`overlay${index}Height`).value);
+      body.set(`overlay${index}X`, $(`overlay${index}X`).value);
+      body.set(`overlay${index}Y`, $(`overlay${index}Y`).value);
+      body.set(`overlay${index}Closed`, $(`overlay${index}Closed`).value);
+      body.set(`overlay${index}Open`, $(`overlay${index}Open`).value);
+      try { render(await api("/api/config", { method: "POST", body })); }
+      catch {
+        const overlays = [...demoConfig.doorOverlays];
+        overlays[index] = {
+          name: body.get(`overlay${index}Name`),
+          width: Number(body.get(`overlay${index}Width`)),
+          height: Number(body.get(`overlay${index}Height`)),
+          x: Number(body.get(`overlay${index}X`)),
+          y: Number(body.get(`overlay${index}Y`)),
+          closed: body.get(`overlay${index}Closed`),
+          open: body.get(`overlay${index}Open`)
+        };
+        render({ ...demoConfig, doorOverlays: overlays });
+      }
+    }
+
+    async function demoSound(index) {
+      const body = new URLSearchParams();
+      body.set("sound", $(`action${index}Canopy`).value);
+      try { await api("/api/sound/demo", { method: "POST", body }); } catch {}
+    }
 
     $("saveBtn").addEventListener("click", saveConfig);
     $("pairBtn").addEventListener("click", startPairing);
     $("rebootBtn").addEventListener("click", rebootDevice);
     loadConfig();
-    if (!demoMode) setInterval(pollPairStatus, 2000);
+    if (shouldPollPairStatus) setInterval(pollPairStatus, 2000);
   </script>
 </body>
 </html>

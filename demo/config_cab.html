@@ -69,14 +69,6 @@
     };
 
     const $ = (id) => document.getElementById(id);
-    const demoMode = window.location.protocol === "file:";
-
-    async function api(path, options) {
-      if (demoMode) throw new Error("Demo mode");
-      const response = await fetch(path, options);
-      if (!response.ok) throw new Error("Request failed");
-      return response.json();
-    }
 
     function render(config) {
       $("deviceName").value = config.deviceName || "ShutUp Cab";
@@ -84,56 +76,36 @@
       $("peerMac").innerHTML = config.hasPeer ? `<span class="ok">${config.peerMac}</span>` : `<span class="warn">Not paired</span>`;
     }
 
-    async function loadConfig() {
-      if (demoMode) {
-        render(demoConfig);
-        return;
-      }
-      try { render(await api("/api/config")); }
-      catch { render(demoConfig); }
-    }
-
-    async function saveConfig() {
-      const body = new URLSearchParams();
-      body.set("deviceName", $("deviceName").value);
-      if (demoMode) {
-        render({ ...demoConfig, deviceName: $("deviceName").value });
-        return;
-      }
-      try { render(await api("/api/config", { method: "POST", body })); }
-      catch { render({ ...demoConfig, deviceName: $("deviceName").value }); }
-    }
-
-    async function startPairing() {
-      $("pairStatus").textContent = "Pairing started. Keep both devices powered in config mode.";
-      if (demoMode) {
-        updatePairStatus({ active: true, hasPeer: true, peerMac: demoConfig.peerMac, message: "Demo pairing complete." });
-        return;
-      }
-      try { updatePairStatus(await api("/api/pair/start", { method: "POST" })); }
-      catch { updatePairStatus({ active: true, hasPeer: true, peerMac: demoConfig.peerMac, message: "Demo pairing complete." }); }
-    }
-
     function updatePairStatus(status) {
       const paired = status.hasPeer ? `Paired peer: ${status.peerMac}` : "No peer stored";
       $("pairStatus").textContent = `${status.message || "Pairing status"} - ${paired}`;
     }
+    const shouldPollPairStatus = false;
+    let demoState = JSON.parse(JSON.stringify(demoConfig));
 
-    async function pollPairStatus() {
-      if (demoMode) return;
-      try { updatePairStatus(await api("/api/pair/status")); } catch {}
+    function loadConfig() {
+      render(demoState);
     }
 
-    async function rebootDevice() {
-      if (demoMode) return;
-      try { await api("/api/reboot", { method: "POST" }); } catch {}
+    function saveConfig() {
+      demoState.deviceName = $("deviceName").value;
+      render(demoState);
     }
+
+    function startPairing() {
+      $("pairStatus").textContent = "Pairing started. Keep both devices powered in config mode.";
+      updatePairStatus({ active: true, hasPeer: true, peerMac: demoState.peerMac, message: "Demo pairing complete." });
+    }
+
+    function pollPairStatus() {}
+
+    function rebootDevice() {}
 
     $("saveBtn").addEventListener("click", saveConfig);
     $("pairBtn").addEventListener("click", startPairing);
     $("rebootBtn").addEventListener("click", rebootDevice);
     loadConfig();
-    if (!demoMode) setInterval(pollPairStatus, 2000);
+    if (shouldPollPairStatus) setInterval(pollPairStatus, 2000);
   </script>
 </body>
 </html>
