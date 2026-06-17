@@ -56,7 +56,7 @@ void startNormalMode() {
   espNow.begin(shutup::DeviceRole::Cab, settings, false);
   display.showConnecting();
   if (!settings.hasPeer()) {
-    Serial.println("No paired Canopy device stored. Boot with config button held to pair.");
+    Serial.println("No paired Canopy device stored. Boot with pairing button held to pair.");
   }
 }
 

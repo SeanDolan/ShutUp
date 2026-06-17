@@ -13,7 +13,7 @@ public:
     wire_ = &wire;
     address_ = address;
     writeRegister(0x00, 0x3F);  // GPA0-GPA5 inputs, GPA6-GPA7 unused outputs.
-    writeRegister(0x06, 0x3F);  // Pull-ups for normally closed switches to ground.
+    writeRegister(0x06, 0x3F);  // Pull-ups for GPA0-GPA5 switch-to-ground inputs.
   }
 
   void readDoorStates(uint8_t enabledMask, DoorState states[kDoorCount]) {

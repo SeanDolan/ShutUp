@@ -36,17 +36,19 @@ ShutUp contains two separate PlatformIO firmware projects:
 
 Project GPIO assignments are listed in the selected pin assignments section below.
 
+Detailed wiring notes are in [docs/wiring.md](docs/wiring.md).
+
 ## Current Firmware Status
 
 - Both devices have startup branching for config/pairing mode vs normal ESP-NOW mode.
-- Config/pairing mode is entered when the device config button is held at boot.
+- Config/pairing mode is entered when the relevant device button is held at boot.
 - The physical config-button GPIOs are assigned in each device `main.cpp`.
-- Cab config-button boot mode does not start a Wi-Fi access point, a web server, or a captive portal.
-- Cab config-button boot mode displays `pairing.png` and waits for pairing to be initiated from the Canopy config page.
+- Cab pairing-button boot mode does not start a Wi-Fi access point, a web server, or a captive portal.
+- Cab pairing-button boot mode displays `pairing.png` and waits for pairing to be initiated from the Canopy config page.
 - Canopy config AP SSID: `SHUTUP-CONFIG`, open network.
 - Canopy config mode starts an HTTP config page and DNS captive-portal responder.
 - ESP-NOW pairing scaffolding is implemented:
-  - Put the Cab into pairing-listen mode by booting it with its config button held.
+  - Put the Cab into pairing-listen mode by booting it with its pairing button held.
   - Put the Canopy into config mode by booting it with its config button held.
   - Connect to the Canopy config AP.
   - Press `Pair Devices` on the Canopy config page.
@@ -78,7 +80,7 @@ These assignments avoid known boot strapping pins, onboard display pins, onboard
 
 | Function | GPIO | Board label | Reason |
 | --- | --- | --- | --- |
-| Config button | GPIO2 | `2` | Exposed ADC/touch-capable GPIO, not marked as strapping, display, touch-controller reset/init, battery sense, onboard button, UART, I2C, or SPI. Safe for held-at-boot input. |
+| Pairing button | GPIO2 | `2` | Exposed ADC/touch-capable GPIO, not marked as strapping, display, touch-controller reset/init, battery sense, onboard button, UART, I2C, or SPI. Safe for held-at-boot input. |
 | Mute input | GPIO1 | `1` | Exposed ADC/touch-capable pin, not marked as a strapping pin. Currently coded as an active-low input. |
 | Speaker signal | GPIO13 | `13` | Exposed output-capable pin, not marked as strapping, display, touch-controller reset/init, battery sense, onboard button, UART, or I2C. |
 
@@ -93,13 +95,14 @@ These assignments avoid known boot strapping pins, onboard display pins, onboard
 | MCP23008 SCL | GPIO21 | `IO21/TX` | Exposed GPIO selected for remapped I2C SCL. Avoids strapping pins GPIO8/GPIO9 and avoids JTAG pins GPIO4-GPIO7. Native USB CDC is enabled for serial logging so GPIO21 is not needed for normal serial. |
 | Speaker signal | GPIO10 | `IO10/RX` | Exposed GPIO, not marked as strapping, onboard LED, SPI, I2C, or JTAG. |
 
-MCP23008 wiring required by the current code:
+MCP23008 wiring summary:
 
-- MCP23008 address is `0x20`; A0, A1, and A2 must be tied low.
-- Door sensor 1-6 map to MCP23008 GPA0-GPA5 in order.
-- The code records physical door state only: `open`, `closed`, or `disabled`.
-- The code enables MCP23008 pull-ups. LOW means the reed contact is closed and is recorded as physical door `open`; HIGH means the reed contact is open and is recorded as physical door `closed`.
-- With this wiring logic, an open-circuit cable fault reads the same as physical door `closed`. If cable fault must report as physical door `open`, the input wiring strategy needs to change before PCB design.
+- Full wiring details are in [docs/wiring.md](docs/wiring.md).
+- MCP23008 address is currently `0x20`; A0, A1, and A2 are tied low.
+- Door sensor 1-6 currently map to MCP23008 GPA0-GPA5 in order.
+- The current firmware records physical door state only: `open`, `closed`, or `disabled`.
+- The current firmware maps LOW to physical door `open` and HIGH to physical door `closed`.
+- The cable-fault-safe reed-switch topology is not PCB-final yet and must be resolved before fabrication.
 
 ## Config Page Demos
 
@@ -134,7 +137,7 @@ Hardware:
 
 - LilyGO T-Display S3.
 - Mute button, possibly implemented as a capacitive touch button.
-- Config button, physically small.
+- Pairing button, physically small.
 - Speaker or alarm sounder: Jaycar `XC3744`.
   - Powered from 5 V.
   - Connections: signal, 5 V input, ground.
@@ -144,7 +147,7 @@ Hardware:
 
 Config behavior:
 
-- If the config button is detected as held during startup, the Cab device enters pairing-listen mode.
+- If the pairing button is detected as held during startup, the Cab device enters pairing-listen mode.
 - Cab pairing-listen mode displays `pairing.png`.
 - Cab pairing-listen mode does not start a Wi-Fi access point, a web server, or a captive portal.
 - Pairing is initiated from the Canopy config page.
