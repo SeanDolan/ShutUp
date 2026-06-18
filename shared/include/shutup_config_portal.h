@@ -75,18 +75,18 @@ private:
       server_.send(500, "application/json", "{\"ok\":false}");
       return;
     }
+    bool configChanged = false;
     if (role_ == DeviceRole::Canopy) {
       if (server_.hasArg("uteColor")) {
         settings_->setUteColor(server_.arg("uteColor"));
-        if (espNow_) {
-          espNow_->syncUteColor();
-        }
+        configChanged = true;
       }
       if (server_.hasArg("doorTouched")) {
         for (uint8_t i = 0; i < kDoorCount; ++i) {
           const String key = String("door") + String(i + 1);
           settings_->setDoorEnabled(i, server_.hasArg(key));
         }
+        configChanged = true;
       }
       if (server_.hasArg("soundTouched")) {
         for (uint8_t i = 0; i < kSoundActionCount; ++i) {
@@ -98,6 +98,7 @@ private:
               server_.hasArg(prefix + "Repeat"),
               parseUIntArg(prefix + "Delay"));
         }
+        configChanged = true;
       }
       for (uint8_t i = 0; i < kDoorCount; ++i) {
         const String prefix = String("overlay") + String(i);
@@ -113,9 +114,10 @@ private:
             parseUShortArg(prefix + "Y"),
             parseColorArg(prefix + "Closed", 0x00FF00),
             parseColorArg(prefix + "Open", 0xFF0000));
-        if (espNow_) {
-          espNow_->syncDoorOverlay(i);
-        }
+        configChanged = true;
+      }
+      if (configChanged) {
+        settings_->markConfigChanged();
       }
     }
     server_.send(200, "application/json", configJson());

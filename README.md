@@ -61,10 +61,12 @@ Detailed wiring notes are in [docs/wiring.md](docs/wiring.md).
   - Cab acts as the state client and periodically requests Canopy state.
 - Cab blacks out the T-Display-S3 screen immediately at startup, then shows config mode or normal status screens.
 - Cab display assets are treated as portrait `170x320`; overlay `X` and `Y` positions are measured from the top-left of that portrait image as `(0,0)`.
-- In normal startup, the Cab shows `startup.png` while ESP-NOW initializes, then shows `connecting.png` until it has received both its first heartbeat response and a complete Canopy config sync.
+- In normal startup, the Cab shows `startup.png` while ESP-NOW initializes, then shows `connecting.png` until it has received both its first heartbeat response and the Canopy config snapshot.
 - Cab sends a non-blocking ESP-NOW heartbeat request every 1 second; Canopy replies with a six-entry physical door-state array.
 - Cab connection health uses the success rate of the most recent 5 heartbeat attempts and average round-trip time from the last 5 successful heartbeats.
-- Canopy pushes one config item per second in a repeating 12-item cycle: 5 sound actions, 6 door overlays, and the ute colour.
+- The first heartbeat requests one compact Cab config snapshot containing Cab sound settings, door enabled states, all six overlay geometry/colour settings, and ute colour.
+- Cab acknowledges the applied config revision in later heartbeat requests. Canopy sends no further config while the revisions match.
+- Saving Canopy config increments its persistent config revision; Canopy sends one updated snapshot on the next heartbeat and retries only until the Cab acknowledges that revision.
 - Canopy reads physical door state through MCP23008 GPA0-GPA5 and reports enabled door states over ESP-NOW.
 - Canopy drives the 8 WS2812S LEDs as power, connectivity, and six door state indicators.
 - Canopy config includes the action sound table for Startup, Connectivity success, Connectivity error, Doors ok, and Door alarm.

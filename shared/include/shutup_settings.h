@@ -114,6 +114,10 @@ public:
     prefs_.getBytes("peer", peerMac_, sizeof(peerMac_));
     doorEnabledMask_ = prefs_.getUChar("doorEn", 0);
     uteColor_ = cleanUteColor(prefs_.getString("uteColor", kDefaultUteColor));
+    configRevision_ = prefs_.getUInt("cfgRev", 1);
+    if (configRevision_ == 0) {
+      configRevision_ = 1;
+    }
     for (uint8_t i = 0; i < kSoundActionCount; ++i) {
       soundActions_[i].cabSound = prefs_.getString(soundKey(i, "cab").c_str(), kNoSoundName);
       soundActions_[i].canopySound = prefs_.getString(soundKey(i, "can").c_str(), kNoSoundName);
@@ -136,6 +140,7 @@ public:
   bool hasPeer() const { return hasPeer_; }
   const uint8_t *peerMac() const { return peerMac_; }
   uint8_t doorEnabledMask() const { return doorEnabledMask_; }
+  uint32_t configRevision() const { return configRevision_; }
   const SoundActionConfig &soundAction(uint8_t index) const { return soundActions_[index]; }
   const DoorOverlayConfig &doorOverlay(uint8_t index) const { return doorOverlays_[index]; }
   const String &uteColor() const { return uteColor_; }
@@ -168,6 +173,11 @@ public:
     } else {
       doorEnabledMask_ &= static_cast<uint8_t>(~bit);
     }
+    prefs_.putUChar("doorEn", doorEnabledMask_);
+  }
+
+  void setDoorEnabledMask(uint8_t mask) {
+    doorEnabledMask_ = static_cast<uint8_t>(mask & ((1U << kDoorCount) - 1U));
     prefs_.putUChar("doorEn", doorEnabledMask_);
   }
 
@@ -217,6 +227,14 @@ public:
   void setUteColor(const String &color) {
     uteColor_ = cleanUteColor(color);
     prefs_.putString("uteColor", uteColor_);
+  }
+
+  void markConfigChanged() {
+    ++configRevision_;
+    if (configRevision_ == 0) {
+      configRevision_ = 1;
+    }
+    prefs_.putUInt("cfgRev", configRevision_);
   }
 
 private:
@@ -274,6 +292,7 @@ private:
   uint8_t peerMac_[6]{};
   bool hasPeer_{false};
   uint8_t doorEnabledMask_{0};
+  uint32_t configRevision_{1};
   SoundActionConfig soundActions_[kSoundActionCount]{};
   DoorOverlayConfig doorOverlays_[kDoorCount]{};
 };

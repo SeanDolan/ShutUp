@@ -5,6 +5,7 @@
 #include <esp_now.h>
 
 #include "shutup_settings.h"
+#include "shutup_sounds.h"
 
 namespace shutup {
 
@@ -15,45 +16,59 @@ enum class PacketType : uint8_t {
   PairAck = 2,
   HeartbeatRequest = 3,
   HeartbeatResponse = 4,
-  ConfigSync = 6,
+  ConfigSnapshot = 5,
 };
 
-enum class ConfigSyncKind : uint8_t {
-  SoundAction = 1,
-  DoorOverlay = 2,
-  UteColor = 3,
-};
-
-struct ShutupPacket {
+struct PacketHeader {
   uint32_t magic;
   uint8_t version;
   uint8_t type;
   uint8_t role;
+  uint8_t reserved;
   uint8_t mac[6];
   uint32_t sequence;
-  uint8_t doorStates[kDoorCount];
-  uint16_t heartbeatLatencyMs;
-  int8_t rssi;
-  uint8_t reserved0;
-  char name[24];
-  uint8_t configKind;
-  uint8_t configIndex;
-  uint8_t repeat;
-  uint8_t reserved[1];
-  uint32_t delayMs;
-  uint16_t overlayWidth;
-  uint16_t overlayHeight;
-  uint16_t overlayX;
-  uint16_t overlayY;
-  uint32_t overlayClosedColor;
-  uint32_t overlayOpenColor;
-  char overlayName[24];
-  char cabSound[24];
-  char canopySound[24];
-  char uteColor[12];
+  uint32_t configRevision;
 };
 
-static_assert(sizeof(ShutupPacket) <= 250, "ESP-NOW packet must fit the standard payload limit");
+struct PairPacket {
+  PacketHeader header;
+};
+
+struct HeartbeatRequestPacket {
+  PacketHeader header;
+};
+
+struct HeartbeatResponsePacket {
+  PacketHeader header;
+  uint8_t doorStates[kDoorCount];
+};
+
+struct CabSoundSnapshot {
+  uint8_t soundId;
+  uint8_t repeat;
+  uint16_t reserved;
+  uint32_t delayMs;
+};
+
+struct DoorOverlaySnapshot {
+  uint16_t width;
+  uint16_t height;
+  uint16_t x;
+  uint16_t y;
+  uint32_t closedColor;
+  uint32_t openColor;
+};
+
+struct CabConfigSnapshotPacket {
+  PacketHeader header;
+  uint8_t uteColorId;
+  uint8_t doorEnabledMask;
+  uint16_t reserved;
+  CabSoundSnapshot sounds[kSoundActionCount];
+  DoorOverlaySnapshot overlays[kDoorCount];
+};
+
+static_assert(sizeof(CabConfigSnapshotPacket) <= 250, "ESP-NOW config snapshot must fit the standard payload limit");
 
 class EspNowManager {
 public:
@@ -96,19 +111,6 @@ public:
         sendHeartbeatRequest();
       }
     }
-    if (!configMode_ && role_ == DeviceRole::Canopy && settings_ && settings_->hasPeer()) {
-      if (now - lastConfigSyncMs_ >= 1000) {
-        lastConfigSyncMs_ = now;
-        if (nextConfigSyncSlot_ < kSoundActionCount) {
-          sendSoundActionConfig(settings_->peerMac(), nextConfigSyncSlot_);
-        } else if (nextConfigSyncSlot_ < kSoundActionCount + kDoorCount) {
-          sendDoorOverlayConfig(settings_->peerMac(), static_cast<uint8_t>(nextConfigSyncSlot_ - kSoundActionCount));
-        } else {
-          sendUteColorConfig(settings_->peerMac());
-        }
-        nextConfigSyncSlot_ = static_cast<uint8_t>((nextConfigSyncSlot_ + 1) % (kSoundActionCount + kDoorCount + 1));
-      }
-    }
   }
 
   void startPairing() {
@@ -135,7 +137,7 @@ public:
   bool cabLinkActive(uint32_t now = millis()) const { return lastCabSeenMs_ != 0 && now - lastCabSeenMs_ <= 5000; }
   bool cabLinkStale(uint32_t now = millis()) const { return lastCabSeenMs_ != 0 && now - lastCabSeenMs_ > 5000 && now - lastCabSeenMs_ <= 15000; }
   bool cabStateFresh(uint32_t now = millis()) const { return lastStateMessageMs_ != 0 && now - lastStateMessageMs_ <= 5000; }
-  bool cabConfigSyncComplete() const { return configSyncReceivedMask_ == kConfigSyncCompleteMask; }
+  bool cabConfigSyncComplete() const { return cabConfigRevision_ != 0; }
   uint8_t heartbeatSuccessPercent() const {
     if (heartbeatResultCount_ == 0) {
       return 0;
@@ -147,30 +149,13 @@ public:
     return static_cast<uint8_t>((successful * 100U) / heartbeatResultCount_);
   }
   uint16_t averageHeartbeatMs() const { return averageHeartbeatMs_; }
-  int8_t lastRssi() const { return 0; }
-  bool rssiAvailable() const { return false; }
-
   void setCanopyDoorStates(const DoorState states[kDoorCount]) {
     memcpy(doorStates_, states, sizeof(doorStates_));
   }
 
-  void syncDoorOverlay(uint8_t index) {
-    if (settings_ && settings_->hasPeer()) {
-      sendDoorOverlayConfig(settings_->peerMac(), index);
-    }
-  }
-
-  void syncUteColor() {
-    if (settings_ && settings_->hasPeer()) {
-      sendUteColorConfig(settings_->peerMac());
-    }
-  }
-
 private:
   static constexpr uint32_t kMagic = 0x53545550UL;
-  static constexpr uint8_t kVersion = 1;
-  static constexpr uint8_t kConfigSyncSlotCount = kSoundActionCount + kDoorCount + 1;
-  static constexpr uint16_t kConfigSyncCompleteMask = static_cast<uint16_t>((1U << kConfigSyncSlotCount) - 1U);
+  static constexpr uint8_t kVersion = 2;
 
   static void onReceiveStatic(const uint8_t *mac, const uint8_t *data, int len) {
     if (instance()) {
@@ -181,23 +166,23 @@ private:
   static void onSendStatic(const uint8_t *, esp_now_send_status_t) {}
 
   void onReceive(const uint8_t *senderMac, const uint8_t *data, int len) {
-    if (len != static_cast<int>(sizeof(ShutupPacket))) {
+    if (len < static_cast<int>(sizeof(PacketHeader))) {
       return;
     }
-    ShutupPacket packet{};
-    memcpy(&packet, data, sizeof(packet));
-    if (packet.magic != kMagic || packet.version != kVersion) {
+    PacketHeader header{};
+    memcpy(&header, data, sizeof(header));
+    if (header.magic != kMagic || header.version != kVersion) {
       return;
     }
-    if (packet.role == static_cast<uint8_t>(role_)) {
+    if (header.role == static_cast<uint8_t>(role_)) {
       return;
     }
 
-    const auto type = static_cast<PacketType>(packet.type);
+    const auto type = static_cast<PacketType>(header.type);
     if (type == PacketType::PairRequest && configMode_) {
       settings_->setPeerMac(senderMac);
       addPeer(senderMac);
-      lastPairMessage_ = String("Paired with ") + roleName(static_cast<DeviceRole>(packet.role)) +
+      lastPairMessage_ = String("Paired with ") + roleName(static_cast<DeviceRole>(header.role)) +
                          " " + macToString(senderMac);
       sendPairAck(senderMac);
       schedulePairingReboot();
@@ -207,21 +192,28 @@ private:
       settings_->setPeerMac(senderMac);
       addPeer(senderMac);
       pairingActive_ = false;
-      lastPairMessage_ = String("Pairing complete with ") + roleName(static_cast<DeviceRole>(packet.role)) +
+      lastPairMessage_ = String("Pairing complete with ") + roleName(static_cast<DeviceRole>(header.role)) +
                          " " + macToString(senderMac);
       schedulePairingReboot();
       return;
     }
-    if (type == PacketType::HeartbeatRequest && role_ == DeviceRole::Canopy) {
+    if (type == PacketType::HeartbeatRequest && role_ == DeviceRole::Canopy &&
+        len == static_cast<int>(sizeof(HeartbeatRequestPacket))) {
       lastCabSeenMs_ = millis();
-      sendHeartbeatResponse(senderMac, packet.sequence);
+      sendHeartbeatResponse(senderMac, header.sequence);
+      if (settings_ && header.configRevision != settings_->configRevision()) {
+        sendConfigSnapshot(senderMac);
+      }
       return;
     }
-    if (type == PacketType::HeartbeatResponse && role_ == DeviceRole::Cab) {
+    if (type == PacketType::HeartbeatResponse && role_ == DeviceRole::Cab &&
+        len == static_cast<int>(sizeof(HeartbeatResponsePacket))) {
+      HeartbeatResponsePacket packet{};
+      memcpy(&packet, data, sizeof(packet));
       const uint32_t now = millis();
       memcpy(lastDoorStates_, packet.doorStates, sizeof(lastDoorStates_));
       lastStateMessageMs_ = now;
-      if (heartbeatPending_ && packet.sequence == lastHeartbeatSequence_) {
+      if (heartbeatPending_ && packet.header.sequence == lastHeartbeatSequence_) {
         heartbeatPending_ = false;
         recordHeartbeatResult(true);
         const uint32_t elapsed = now - lastHeartbeatSentMs_;
@@ -229,42 +221,37 @@ private:
       }
       return;
     }
-    if (type == PacketType::ConfigSync && role_ == DeviceRole::Cab &&
-        packet.configKind == static_cast<uint8_t>(ConfigSyncKind::SoundAction) &&
-        packet.configIndex < kSoundActionCount) {
-      settings_->setSoundAction(packet.configIndex, packet.cabSound, packet.canopySound, packet.repeat != 0, packet.delayMs);
-      configSyncReceivedMask_ |= static_cast<uint16_t>(1U << packet.configIndex);
-      return;
-    }
-    if (type == PacketType::ConfigSync && role_ == DeviceRole::Cab &&
-        packet.configKind == static_cast<uint8_t>(ConfigSyncKind::DoorOverlay) &&
-        packet.configIndex < kDoorCount) {
-      settings_->setDoorOverlay(packet.configIndex, packet.overlayName, packet.overlayWidth, packet.overlayHeight,
-                                packet.overlayX, packet.overlayY, packet.overlayClosedColor, packet.overlayOpenColor);
-      configSyncReceivedMask_ |= static_cast<uint16_t>(1U << (kSoundActionCount + packet.configIndex));
-      return;
-    }
-    if (type == PacketType::ConfigSync && role_ == DeviceRole::Cab &&
-        packet.configKind == static_cast<uint8_t>(ConfigSyncKind::UteColor)) {
-      settings_->setUteColor(packet.uteColor);
-      configSyncReceivedMask_ |= static_cast<uint16_t>(1U << (kSoundActionCount + kDoorCount));
+    if (type == PacketType::ConfigSnapshot && role_ == DeviceRole::Cab &&
+        len == static_cast<int>(sizeof(CabConfigSnapshotPacket)) && settings_) {
+      CabConfigSnapshotPacket packet{};
+      memcpy(&packet, data, sizeof(packet));
+      settings_->setUteColor(uteColorName(packet.uteColorId));
+      settings_->setDoorEnabledMask(packet.doorEnabledMask);
+      for (uint8_t i = 0; i < kSoundActionCount; ++i) {
+        const ToneSound *sound = findToneSoundById(packet.sounds[i].soundId);
+        const String canopySound = settings_->soundAction(i).canopySound;
+        settings_->setSoundAction(i, sound ? sound->name : kNoSoundName, canopySound,
+                                  packet.sounds[i].repeat != 0, packet.sounds[i].delayMs);
+      }
+      for (uint8_t i = 0; i < kDoorCount; ++i) {
+        const String name = settings_->doorOverlay(i).name;
+        settings_->setDoorOverlay(i, name, packet.overlays[i].width, packet.overlays[i].height,
+                                  packet.overlays[i].x, packet.overlays[i].y,
+                                  packet.overlays[i].closedColor, packet.overlays[i].openColor);
+      }
+      cabConfigRevision_ = packet.header.configRevision;
       return;
     }
   }
 
-  void fillPacket(ShutupPacket &packet, PacketType type) {
-    packet.magic = kMagic;
-    packet.version = kVersion;
-    packet.type = static_cast<uint8_t>(type);
-    packet.role = static_cast<uint8_t>(role_);
-    WiFi.macAddress(packet.mac);
-    packet.sequence = ++sequence_;
-    memcpy(packet.doorStates, doorStates_, sizeof(packet.doorStates));
-    packet.heartbeatLatencyMs = averageHeartbeatMs_;
-    packet.rssi = 0;
-    if (settings_) {
-      strlcpy(packet.name, settings_->deviceName().c_str(), sizeof(packet.name));
-    }
+  void fillHeader(PacketHeader &header, PacketType type) {
+    header.magic = kMagic;
+    header.version = kVersion;
+    header.type = static_cast<uint8_t>(type);
+    header.role = static_cast<uint8_t>(role_);
+    WiFi.macAddress(header.mac);
+    header.sequence = ++sequence_;
+    header.configRevision = settings_ ? settings_->configRevision() : 0;
   }
 
   bool addPeer(const uint8_t mac[6]) {
@@ -285,15 +272,15 @@ private:
 
   void sendPairRequest() {
     const uint8_t broadcast[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-    ShutupPacket packet{};
-    fillPacket(packet, PacketType::PairRequest);
+    PairPacket packet{};
+    fillHeader(packet.header, PacketType::PairRequest);
     esp_now_send(broadcast, reinterpret_cast<uint8_t *>(&packet), sizeof(packet));
-    lastPairMessage_ = "Pairing broadcast sent. Put the other device in config mode.";
+    lastPairMessage_ = "Pairing broadcast sent. Put the Cab in pairing mode.";
   }
 
   void sendPairAck(const uint8_t mac[6]) {
-    ShutupPacket packet{};
-    fillPacket(packet, PacketType::PairAck);
+    PairPacket packet{};
+    fillHeader(packet.header, PacketType::PairAck);
     esp_now_send(mac, reinterpret_cast<uint8_t *>(&packet), sizeof(packet));
   }
 
@@ -311,64 +298,46 @@ private:
       heartbeatPending_ = false;
       recordHeartbeatResult(false);
     }
-    ShutupPacket packet{};
-    fillPacket(packet, PacketType::HeartbeatRequest);
-    lastHeartbeatSequence_ = packet.sequence;
+    HeartbeatRequestPacket packet{};
+    fillHeader(packet.header, PacketType::HeartbeatRequest);
+    packet.header.configRevision = cabConfigRevision_;
+    lastHeartbeatSequence_ = packet.header.sequence;
     lastHeartbeatSentMs_ = millis();
     heartbeatPending_ = true;
     esp_now_send(settings_->peerMac(), reinterpret_cast<uint8_t *>(&packet), sizeof(packet));
   }
 
   void sendHeartbeatResponse(const uint8_t mac[6], uint32_t requestSequence) {
-    ShutupPacket packet{};
-    fillPacket(packet, PacketType::HeartbeatResponse);
-    packet.sequence = requestSequence;
+    HeartbeatResponsePacket packet{};
+    fillHeader(packet.header, PacketType::HeartbeatResponse);
+    packet.header.sequence = requestSequence;
+    memcpy(packet.doorStates, doorStates_, sizeof(packet.doorStates));
     esp_now_send(mac, reinterpret_cast<uint8_t *>(&packet), sizeof(packet));
   }
 
-  void sendSoundActionConfig(const uint8_t mac[6], uint8_t index) {
-    if (!settings_ || index >= kSoundActionCount) {
-      return;
-    }
-    ShutupPacket packet{};
-    fillPacket(packet, PacketType::ConfigSync);
-    const SoundActionConfig &action = settings_->soundAction(index);
-    packet.configKind = static_cast<uint8_t>(ConfigSyncKind::SoundAction);
-    packet.configIndex = index;
-    packet.repeat = action.repeat ? 1 : 0;
-    packet.delayMs = action.delayMs;
-    strlcpy(packet.cabSound, action.cabSound.c_str(), sizeof(packet.cabSound));
-    strlcpy(packet.canopySound, action.canopySound.c_str(), sizeof(packet.canopySound));
-    esp_now_send(mac, reinterpret_cast<uint8_t *>(&packet), sizeof(packet));
-  }
-
-  void sendDoorOverlayConfig(const uint8_t mac[6], uint8_t index) {
-    if (!settings_ || index >= kDoorCount) {
-      return;
-    }
-    ShutupPacket packet{};
-    fillPacket(packet, PacketType::ConfigSync);
-    const DoorOverlayConfig &overlay = settings_->doorOverlay(index);
-    packet.configKind = static_cast<uint8_t>(ConfigSyncKind::DoorOverlay);
-    packet.configIndex = index;
-    packet.overlayWidth = overlay.width;
-    packet.overlayHeight = overlay.height;
-    packet.overlayX = overlay.x;
-    packet.overlayY = overlay.y;
-    packet.overlayClosedColor = overlay.closedColor;
-    packet.overlayOpenColor = overlay.openColor;
-    strlcpy(packet.overlayName, overlay.name.c_str(), sizeof(packet.overlayName));
-    esp_now_send(mac, reinterpret_cast<uint8_t *>(&packet), sizeof(packet));
-  }
-
-  void sendUteColorConfig(const uint8_t mac[6]) {
+  void sendConfigSnapshot(const uint8_t mac[6]) {
     if (!settings_) {
       return;
     }
-    ShutupPacket packet{};
-    fillPacket(packet, PacketType::ConfigSync);
-    packet.configKind = static_cast<uint8_t>(ConfigSyncKind::UteColor);
-    strlcpy(packet.uteColor, settings_->uteColor().c_str(), sizeof(packet.uteColor));
+    CabConfigSnapshotPacket packet{};
+    fillHeader(packet.header, PacketType::ConfigSnapshot);
+    packet.uteColorId = uteColorId(settings_->uteColor());
+    packet.doorEnabledMask = settings_->doorEnabledMask();
+    for (uint8_t i = 0; i < kSoundActionCount; ++i) {
+      const SoundActionConfig &action = settings_->soundAction(i);
+      packet.sounds[i].soundId = toneSoundIdByName(action.cabSound);
+      packet.sounds[i].repeat = action.repeat ? 1 : 0;
+      packet.sounds[i].delayMs = action.delayMs;
+    }
+    for (uint8_t i = 0; i < kDoorCount; ++i) {
+      const DoorOverlayConfig &overlay = settings_->doorOverlay(i);
+      packet.overlays[i].width = overlay.width;
+      packet.overlays[i].height = overlay.height;
+      packet.overlays[i].x = overlay.x;
+      packet.overlays[i].y = overlay.y;
+      packet.overlays[i].closedColor = overlay.closedColor;
+      packet.overlays[i].openColor = overlay.openColor;
+    }
     esp_now_send(mac, reinterpret_cast<uint8_t *>(&packet), sizeof(packet));
   }
 
@@ -396,6 +365,21 @@ private:
     if (heartbeatResultCount_ < kHeartbeatWindow) {
       ++heartbeatResultCount_;
     }
+  }
+
+  static uint8_t uteColorId(const String &color) {
+    if (color == "white") return 1;
+    if (color == "gray") return 2;
+    if (color == "red") return 3;
+    if (color == "blue") return 4;
+    if (color == "green") return 5;
+    if (color == "yellow") return 6;
+    return 0;
+  }
+
+  static const char *uteColorName(uint8_t id) {
+    static constexpr const char *kColors[] = {"black", "white", "gray", "red", "blue", "green", "yellow"};
+    return id < (sizeof(kColors) / sizeof(kColors[0])) ? kColors[id] : kDefaultUteColor;
   }
 
   static uint8_t doorEnabledMaskFrom(const DoorState states[kDoorCount]) {
@@ -428,7 +412,6 @@ private:
   uint32_t lastStateRequestMs_{0};
   uint32_t lastStateMessageMs_{0};
   uint32_t lastCabSeenMs_{0};
-  uint32_t lastConfigSyncMs_{0};
   uint32_t sequence_{0};
   static constexpr uint8_t kHeartbeatWindow = 5;
   uint8_t heartbeatResults_[kHeartbeatWindow]{};
@@ -441,8 +424,7 @@ private:
   uint16_t averageHeartbeatMs_{0};
   uint32_t lastHeartbeatSequence_{0};
   uint32_t lastHeartbeatSentMs_{0};
-  uint8_t nextConfigSyncSlot_{0};
-  uint16_t configSyncReceivedMask_{0};
+  uint32_t cabConfigRevision_{0};
   DoorState doorStates_[kDoorCount]{};
   DoorState lastDoorStates_[kDoorCount]{};
   String localMac_;

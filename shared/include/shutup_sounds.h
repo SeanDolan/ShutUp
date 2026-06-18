@@ -207,4 +207,18 @@ inline const ToneSound *findToneSoundByName(const String &name) {
   return nullptr;
 }
 
+inline const ToneSound *findToneSoundById(uint8_t id) {
+  for (uint8_t i = 0; i < kToneSoundCount; ++i) {
+    if (kToneSounds[i].id == id) {
+      return &kToneSounds[i];
+    }
+  }
+  return nullptr;
+}
+
+inline uint8_t toneSoundIdByName(const String &name) {
+  const ToneSound *sound = findToneSoundByName(name);
+  return sound ? sound->id : 0;
+}
+
 }  // namespace shutup
