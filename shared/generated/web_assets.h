@@ -25,6 +25,7 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
     .status { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 10px; min-height: 42px; }
     .muted { color: var(--muted); }
     .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .device-actions { margin-top: 12px; }
     .door-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
     .door { border: 1px solid var(--line); border-radius: 4px; padding: 10px; background: var(--panel); }
     .door label { display: flex; gap: 8px; align-items: center; margin: 0; }
@@ -119,7 +120,7 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
         <div class="status"><div class="muted">Local MAC</div><div id="localMac">Loading...</div></div>
         <div class="status"><div class="muted">Paired peer</div><div id="peerMac">Loading...</div></div>
       </div>
-      <div class="row">
+      <div class="row device-actions">
         <button id="saveBtn">Save config</button>
         <button id="rebootBtn" class="secondary">Reboot</button>
       </div>
