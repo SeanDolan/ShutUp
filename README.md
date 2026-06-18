@@ -64,6 +64,8 @@ Detailed wiring notes are in [docs/wiring.md](docs/wiring.md).
 - In normal startup, the Cab shows `startup.png` while ESP-NOW initializes, then shows `connecting.png` until it has received both its first heartbeat response and the Canopy config snapshot.
 - Cab sends a non-blocking ESP-NOW heartbeat request every 1 second; Canopy replies with a six-entry physical door-state array.
 - Cab connection health uses the success rate of the most recent 5 heartbeat attempts and average round-trip time from the last 5 successful heartbeats.
+- The Cab normal display is region-updated: the ute background is drawn once, and LCD pixels are written only when a door state, mute state, heartbeat bar count, ute colour, or overlay configuration changes.
+- Door changes redraw only that configured door rectangle. Mute and heartbeat changes redraw only their black indicator regions.
 - The first heartbeat requests one compact Cab config snapshot containing Cab sound settings, door enabled states, all six overlay geometry/colour settings, and ute colour.
 - Cab acknowledges the applied config revision in later heartbeat requests. Canopy sends no further config while the revisions match.
 - Saving Canopy config increments its persistent config revision; Canopy sends one updated snapshot on the next heartbeat and retries only until the Cab acknowledges that revision.

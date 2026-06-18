@@ -39,26 +39,39 @@ public:
 
   void showNormal(const DoorState states[kDoorCount], const SettingsStore &settings, bool linkFresh, uint8_t heartbeatPercent,
                   uint16_t, bool muted) {
-    drawImage(uteImageFor(settings.uteColor()));
-    if (muted) {
-      drawText(113, 8, "M", 3, kWhite);
+    const uint16_t *uteImage = uteImageFor(settings.uteColor());
+    const uint8_t heartbeatBars = heartbeatBarCount(linkFresh ? heartbeatPercent : 0);
+    const bool fullRedraw = !normalRendered_ || renderedUteImage_ != uteImage || overlayConfigChanged(settings);
+
+    if (fullRedraw) {
+      drawImage(uteImage);
+      renderedUteImage_ = uteImage;
+      cacheOverlayConfig(settings);
+      for (uint8_t i = 0; i < kDoorCount; ++i) {
+        drawDoorOverlay(i, states[i], settings.doorOverlay(i));
+        renderedDoorStates_[i] = states[i];
+      }
+      drawMuteIndicator(muted);
+      drawHeartbeatIndicator(heartbeatBars);
+      renderedMuted_ = muted;
+      renderedHeartbeatBars_ = heartbeatBars;
+      normalRendered_ = true;
+      return;
     }
-    drawHeartbeatBars(145, 9, linkFresh ? heartbeatPercent : 0);
 
     for (uint8_t i = 0; i < kDoorCount; ++i) {
-      const DoorOverlayConfig &overlay = settings.doorOverlay(i);
-      const bool configured = overlay.width > 0 && overlay.height > 0;
-      const int x = configured ? overlay.x : 12 + (i % 2) * 78;
-      const int y = configured ? overlay.y : 130 + (i / 2) * 42;
-      const int width = configured ? overlay.width : 58;
-      const int height = configured ? overlay.height : 28;
-      const bool enabled = states[i] != DoorState::Disabled;
-      const bool doorOpen = states[i] == DoorState::Open;
-      const uint16_t color = !enabled ? kDim : rgb565(doorOpen ? overlay.openColor : overlay.closedColor);
-      fillRect(x, y, width, height, color);
-      if (!configured || width >= 42) {
-        drawText(x + 4, y + 4, !enabled ? "OFF" : (doorOpen ? "OPEN" : "OK"), 1, kBlack);
+      if (states[i] != renderedDoorStates_[i]) {
+        drawDoorOverlay(i, states[i], settings.doorOverlay(i));
+        renderedDoorStates_[i] = states[i];
       }
+    }
+    if (muted != renderedMuted_) {
+      drawMuteIndicator(muted);
+      renderedMuted_ = muted;
+    }
+    if (heartbeatBars != renderedHeartbeatBars_) {
+      drawHeartbeatIndicator(heartbeatBars);
+      renderedHeartbeatBars_ = heartbeatBars;
     }
   }
 
@@ -72,6 +85,23 @@ private:
   static constexpr uint16_t kBlue = 0x001F;
   static constexpr uint16_t kOrange = 0xFD20;
   static constexpr uint16_t kDim = 0x39E7;
+  static constexpr int kMuteX = 113;
+  static constexpr int kMuteY = 8;
+  static constexpr int kMuteWidth = 15;
+  static constexpr int kMuteHeight = 21;
+  static constexpr int kHeartbeatX = 145;
+  static constexpr int kHeartbeatY = 9;
+  static constexpr int kHeartbeatWidth = 19;
+  static constexpr int kHeartbeatHeight = 17;
+
+  struct RenderedOverlayConfig {
+    uint16_t width;
+    uint16_t height;
+    uint16_t x;
+    uint16_t y;
+    uint32_t closedColor;
+    uint32_t openColor;
+  };
 
   static uint16_t rgb565(uint32_t color) {
     const uint8_t r = static_cast<uint8_t>((color >> 16) & 0xFF);
@@ -100,6 +130,64 @@ private:
       return kCabUteYellowImage;
     }
     return kCabUteBlackImage;
+  }
+
+  static uint8_t heartbeatBarCount(uint8_t heartbeatPercent) {
+    return heartbeatPercent >= 80 ? 3 : (heartbeatPercent >= 45 ? 2 : (heartbeatPercent > 0 ? 1 : 0));
+  }
+
+  bool overlayConfigChanged(const SettingsStore &settings) const {
+    for (uint8_t i = 0; i < kDoorCount; ++i) {
+      const DoorOverlayConfig &overlay = settings.doorOverlay(i);
+      const RenderedOverlayConfig &rendered = renderedOverlays_[i];
+      if (overlay.width != rendered.width || overlay.height != rendered.height ||
+          overlay.x != rendered.x || overlay.y != rendered.y ||
+          overlay.closedColor != rendered.closedColor || overlay.openColor != rendered.openColor) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void cacheOverlayConfig(const SettingsStore &settings) {
+    for (uint8_t i = 0; i < kDoorCount; ++i) {
+      const DoorOverlayConfig &overlay = settings.doorOverlay(i);
+      renderedOverlays_[i] = {
+          overlay.width,
+          overlay.height,
+          overlay.x,
+          overlay.y,
+          overlay.closedColor,
+          overlay.openColor,
+      };
+    }
+  }
+
+  void drawDoorOverlay(uint8_t index, DoorState state, const DoorOverlayConfig &overlay) {
+    const bool configured = overlay.width > 0 && overlay.height > 0;
+    const int x = configured ? overlay.x : 12 + (index % 2) * 78;
+    const int y = configured ? overlay.y : 130 + (index / 2) * 42;
+    const int width = configured ? overlay.width : 58;
+    const int height = configured ? overlay.height : 28;
+    const bool enabled = state != DoorState::Disabled;
+    const bool doorOpen = state == DoorState::Open;
+    const uint16_t color = !enabled ? kDim : rgb565(doorOpen ? overlay.openColor : overlay.closedColor);
+    fillRect(x, y, width, height, color);
+    if (!configured || width >= 42) {
+      drawText(x + 4, y + 4, !enabled ? "OFF" : (doorOpen ? "OPEN" : "OK"), 1, kBlack);
+    }
+  }
+
+  void drawMuteIndicator(bool muted) {
+    fillRect(kMuteX, kMuteY, kMuteWidth, kMuteHeight, kBlack);
+    if (muted) {
+      drawText(kMuteX, kMuteY, "M", 3, kWhite);
+    }
+  }
+
+  void drawHeartbeatIndicator(uint8_t bars) {
+    fillRect(kHeartbeatX, kHeartbeatY, kHeartbeatWidth, kHeartbeatHeight, kBlack);
+    drawHeartbeatBars(kHeartbeatX, kHeartbeatY, bars);
   }
 
   struct LcdCommand {
@@ -234,8 +322,7 @@ private:
     drawText(x, y, text, scale, color);
   }
 
-  void drawHeartbeatBars(int x, int y, uint8_t heartbeatPercent) {
-    const uint8_t bars = heartbeatPercent >= 80 ? 3 : (heartbeatPercent >= 45 ? 2 : (heartbeatPercent > 0 ? 1 : 0));
+  void drawHeartbeatBars(int x, int y, uint8_t bars) {
     for (uint8_t i = 0; i < 3; ++i) {
       const int barHeight = 7 + i * 5;
       const int barY = y + (17 - barHeight);
@@ -315,6 +402,12 @@ private:
   esp_lcd_panel_io_handle_t io_{nullptr};
   esp_lcd_panel_handle_t panel_{nullptr};
   uint16_t line_[kWidth]{};
+  bool normalRendered_{false};
+  bool renderedMuted_{false};
+  uint8_t renderedHeartbeatBars_{0};
+  const uint16_t *renderedUteImage_{nullptr};
+  DoorState renderedDoorStates_[kDoorCount]{};
+  RenderedOverlayConfig renderedOverlays_[kDoorCount]{};
 };
 
 }  // namespace shutup

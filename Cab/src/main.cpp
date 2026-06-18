@@ -28,8 +28,6 @@ bool lastLinkFresh = false;
 bool normalDisplayActive = false;
 uint8_t mutedDoorMask = 0;
 uint32_t allDoorsOkSinceMs = 0;
-shutup::DoorState lastDoorStates[shutup::kDoorCount]{};
-uint32_t lastDisplayMs = 0;
 
 void setupHardwarePins() {
   pinMode(kConfigButtonGpio, INPUT_PULLUP);
@@ -117,12 +115,9 @@ void updateDoorAlarm(uint8_t openMask, uint32_t now) {
 void updateNormalOperation() {
   const uint32_t now = millis();
   const bool linkFresh = espNow.cabStateFresh(now);
-  const bool linkChanged = linkFresh != lastLinkFresh;
   shutup::DoorState doorStates[shutup::kDoorCount]{};
-  bool doorStatesChanged = false;
   for (uint8_t i = 0; i < shutup::kDoorCount; ++i) {
     doorStates[i] = espNow.lastDoorState(i);
-    doorStatesChanged = doorStatesChanged || doorStates[i] != lastDoorStates[i];
   }
 
   const bool initialSyncReady = linkFresh && espNow.cabConfigSyncComplete();
@@ -130,7 +125,6 @@ void updateNormalOperation() {
     return;
   }
 
-  const bool enteringNormalDisplay = !normalDisplayActive;
   normalDisplayActive = true;
   if (linkFresh && !lastLinkFresh) {
     soundPlayer.trigger(shutup::SoundAction::ConnectivitySuccess);
@@ -140,11 +134,7 @@ void updateNormalOperation() {
 
   updateDoorAlarm(openDoorMask(doorStates), now);
 
-  if (enteringNormalDisplay || now - lastDisplayMs >= 500 || doorStatesChanged || linkChanged) {
-    display.showNormal(doorStates, settings, linkFresh, espNow.heartbeatSuccessPercent(), espNow.averageHeartbeatMs(), muted);
-    lastDisplayMs = now;
-    memcpy(lastDoorStates, doorStates, sizeof(lastDoorStates));
-  }
+  display.showNormal(doorStates, settings, linkFresh, espNow.heartbeatSuccessPercent(), espNow.averageHeartbeatMs(), muted);
   lastLinkFresh = linkFresh;
 }
 
