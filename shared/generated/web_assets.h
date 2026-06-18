@@ -50,8 +50,6 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
     .overlay-table .name-col { width: auto; }
     .overlay-table .small-col { width: 78px; }
     .overlay-table .color-col { width: 76px; }
-    .overlay-table .save-col { width: 72px; }
-    .overlay-table button { width: 100%; padding-left: 8px; padding-right: 8px; }
     @media (max-width: 640px) {
       header { padding: 16px 14px 10px; }
       h1 { font-size: 22px; }
@@ -183,7 +181,6 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
             <th class="small-col">Y</th>
             <th class="color-col">Closed</th>
             <th class="color-col">Open</th>
-            <th class="save-col">Save</th>
           </tr>
         </thead>
         <tbody id="overlayRows"></tbody>
@@ -302,11 +299,7 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
           <td data-label="Y"><input id="overlay${index}Y" type="number" min="0" max="320" value="${overlay.y || 0}"></td>
           <td data-label="Closed"><input id="overlay${index}Closed" type="color" value="${overlay.closed || "#00FF00"}"></td>
           <td data-label="Open"><input id="overlay${index}Open" type="color" value="${overlay.open || "#FF0000"}"></td>
-          <td data-label="Save"><button type="button" data-overlay-save="${index}">Save</button></td>
         </tr>`).join("");
-      document.querySelectorAll("[data-overlay-save]").forEach((button) => {
-        button.addEventListener("click", () => saveOverlay(Number(button.dataset.overlaySave)));
-      });
     }
 
     function escapeAttr(value) {
@@ -383,6 +376,16 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
         if ($(`action${i}Repeat`).checked) body.set(`action${i}Repeat`, "on");
         body.set(`action${i}Delay`, $(`action${i}Delay`).value);
       }
+      for (let i = 0; i < 6; i++) {
+        body.set(`overlay${i}Touched`, "on");
+        body.set(`overlay${i}Name`, $(`overlay${i}Name`).value || `Door #${i + 1}`);
+        body.set(`overlay${i}Width`, $(`overlay${i}Width`).value);
+        body.set(`overlay${i}Height`, $(`overlay${i}Height`).value);
+        body.set(`overlay${i}X`, $(`overlay${i}X`).value);
+        body.set(`overlay${i}Y`, $(`overlay${i}Y`).value);
+        body.set(`overlay${i}Closed`, $(`overlay${i}Closed`).value);
+        body.set(`overlay${i}Open`, $(`overlay${i}Open`).value);
+      }
       try { render(await api("/api/config", { method: "POST", body })); }
       catch {
         let mask = 0;
@@ -403,32 +406,6 @@ static constexpr const char kConfigCanHtml[] = R"SHUTUP_HTML(<!doctype html>
 
     async function rebootDevice() {
       try { await api("/api/reboot", { method: "POST" }); } catch {}
-    }
-
-    async function saveOverlay(index) {
-      const body = new URLSearchParams();
-      body.set(`overlay${index}Touched`, "on");
-      body.set(`overlay${index}Name`, $(`overlay${index}Name`).value || `Door #${index + 1}`);
-      body.set(`overlay${index}Width`, $(`overlay${index}Width`).value);
-      body.set(`overlay${index}Height`, $(`overlay${index}Height`).value);
-      body.set(`overlay${index}X`, $(`overlay${index}X`).value);
-      body.set(`overlay${index}Y`, $(`overlay${index}Y`).value);
-      body.set(`overlay${index}Closed`, $(`overlay${index}Closed`).value);
-      body.set(`overlay${index}Open`, $(`overlay${index}Open`).value);
-      try { render(await api("/api/config", { method: "POST", body })); }
-      catch {
-        const overlays = [...demoConfig.doorOverlays];
-        overlays[index] = {
-          name: body.get(`overlay${index}Name`),
-          width: Number(body.get(`overlay${index}Width`)),
-          height: Number(body.get(`overlay${index}Height`)),
-          x: Number(body.get(`overlay${index}X`)),
-          y: Number(body.get(`overlay${index}Y`)),
-          closed: body.get(`overlay${index}Closed`),
-          open: body.get(`overlay${index}Open`)
-        };
-        render({ ...demoConfig, doorOverlays: overlays });
-      }
     }
 
     async function demoSound(index) {

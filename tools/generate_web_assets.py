@@ -42,6 +42,16 @@ CAN_DEVICE_TRANSPORT = """    const shouldPollPairStatus = true;
         if ($(`action${i}Repeat`).checked) body.set(`action${i}Repeat`, "on");
         body.set(`action${i}Delay`, $(`action${i}Delay`).value);
       }
+      for (let i = 0; i < 6; i++) {
+        body.set(`overlay${i}Touched`, "on");
+        body.set(`overlay${i}Name`, $(`overlay${i}Name`).value || `Door #${i + 1}`);
+        body.set(`overlay${i}Width`, $(`overlay${i}Width`).value);
+        body.set(`overlay${i}Height`, $(`overlay${i}Height`).value);
+        body.set(`overlay${i}X`, $(`overlay${i}X`).value);
+        body.set(`overlay${i}Y`, $(`overlay${i}Y`).value);
+        body.set(`overlay${i}Closed`, $(`overlay${i}Closed`).value);
+        body.set(`overlay${i}Open`, $(`overlay${i}Open`).value);
+      }
       try { render(await api("/api/config", { method: "POST", body })); }
       catch {
         let mask = 0;
@@ -62,32 +72,6 @@ CAN_DEVICE_TRANSPORT = """    const shouldPollPairStatus = true;
 
     async function rebootDevice() {
       try { await api("/api/reboot", { method: "POST" }); } catch {}
-    }
-
-    async function saveOverlay(index) {
-      const body = new URLSearchParams();
-      body.set(`overlay${index}Touched`, "on");
-      body.set(`overlay${index}Name`, $(`overlay${index}Name`).value || `Door #${index + 1}`);
-      body.set(`overlay${index}Width`, $(`overlay${index}Width`).value);
-      body.set(`overlay${index}Height`, $(`overlay${index}Height`).value);
-      body.set(`overlay${index}X`, $(`overlay${index}X`).value);
-      body.set(`overlay${index}Y`, $(`overlay${index}Y`).value);
-      body.set(`overlay${index}Closed`, $(`overlay${index}Closed`).value);
-      body.set(`overlay${index}Open`, $(`overlay${index}Open`).value);
-      try { render(await api("/api/config", { method: "POST", body })); }
-      catch {
-        const overlays = [...demoConfig.doorOverlays];
-        overlays[index] = {
-          name: body.get(`overlay${index}Name`),
-          width: Number(body.get(`overlay${index}Width`)),
-          height: Number(body.get(`overlay${index}Height`)),
-          x: Number(body.get(`overlay${index}X`)),
-          y: Number(body.get(`overlay${index}Y`)),
-          closed: body.get(`overlay${index}Closed`),
-          open: body.get(`overlay${index}Open`)
-        };
-        render({ ...demoConfig, doorOverlays: overlays });
-      }
     }
 
     async function demoSound(index) {
@@ -123,6 +107,15 @@ CAN_DEMO_TRANSPORT = """    const shouldPollPairStatus = false;
       demoState.uteColor = $("uteColor").value;
       demoState.doorEnabledMask = readDoorEnabledMask();
       demoState.soundActions = readSoundActions();
+      demoState.doorOverlays = demoState.doorOverlays.map((overlay, index) => ({
+        name: $(`overlay${index}Name`).value || `Door #${index + 1}`,
+        width: Number($(`overlay${index}Width`).value || 0),
+        height: Number($(`overlay${index}Height`).value || 0),
+        x: Number($(`overlay${index}X`).value || 0),
+        y: Number($(`overlay${index}Y`).value || 0),
+        closed: $(`overlay${index}Closed`).value,
+        open: $(`overlay${index}Open`).value
+      }));
       render(demoState);
     }
 
@@ -134,19 +127,6 @@ CAN_DEMO_TRANSPORT = """    const shouldPollPairStatus = false;
     function pollPairStatus() {}
 
     function rebootDevice() {}
-
-    function saveOverlay(index) {
-      demoState.doorOverlays[index] = {
-        name: $(`overlay${index}Name`).value || `Door #${index + 1}`,
-        width: Number($(`overlay${index}Width`).value || 0),
-        height: Number($(`overlay${index}Height`).value || 0),
-        x: Number($(`overlay${index}X`).value || 0),
-        y: Number($(`overlay${index}Y`).value || 0),
-        closed: $(`overlay${index}Closed`).value,
-        open: $(`overlay${index}Open`).value
-      };
-      render(demoState);
-    }
 
     function demoSound(index) {
       playTonePreview($(`action${index}Canopy`).value);

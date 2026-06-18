@@ -46,8 +46,6 @@
     .overlay-table .name-col { width: auto; }
     .overlay-table .small-col { width: 78px; }
     .overlay-table .color-col { width: 76px; }
-    .overlay-table .save-col { width: 72px; }
-    .overlay-table button { width: 100%; padding-left: 8px; padding-right: 8px; }
     @media (max-width: 640px) {
       header { padding: 16px 14px 10px; }
       h1 { font-size: 22px; }
@@ -179,7 +177,6 @@
             <th class="small-col">Y</th>
             <th class="color-col">Closed</th>
             <th class="color-col">Open</th>
-            <th class="save-col">Save</th>
           </tr>
         </thead>
         <tbody id="overlayRows"></tbody>
@@ -272,11 +269,7 @@
           <td data-label="Y"><input id="overlay${index}Y" type="number" min="0" max="320" value="${overlay.y || 0}"></td>
           <td data-label="Closed"><input id="overlay${index}Closed" type="color" value="${overlay.closed || "#00FF00"}"></td>
           <td data-label="Open"><input id="overlay${index}Open" type="color" value="${overlay.open || "#FF0000"}"></td>
-          <td data-label="Save"><button type="button" data-overlay-save="${index}">Save</button></td>
         </tr>`).join("");
-      document.querySelectorAll("[data-overlay-save]").forEach((button) => {
-        button.addEventListener("click", () => saveOverlay(Number(button.dataset.overlaySave)));
-      });
     }
 
     function escapeAttr(value) {
