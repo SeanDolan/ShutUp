@@ -135,11 +135,16 @@ public:
   bool cabLinkActive(uint32_t now = millis()) const { return lastCabSeenMs_ != 0 && now - lastCabSeenMs_ <= 5000; }
   bool cabLinkStale(uint32_t now = millis()) const { return lastCabSeenMs_ != 0 && now - lastCabSeenMs_ > 5000 && now - lastCabSeenMs_ <= 15000; }
   bool cabStateFresh(uint32_t now = millis()) const { return lastStateMessageMs_ != 0 && now - lastStateMessageMs_ <= 5000; }
+  bool cabConfigSyncComplete() const { return configSyncReceivedMask_ == kConfigSyncCompleteMask; }
   uint8_t heartbeatSuccessPercent() const {
-    if (heartbeatSent_ == 0) {
+    if (heartbeatResultCount_ == 0) {
       return 0;
     }
-    return static_cast<uint8_t>((heartbeatOk_ * 100U) / heartbeatSent_);
+    uint8_t successful = 0;
+    for (uint8_t i = 0; i < heartbeatResultCount_; ++i) {
+      successful += heartbeatResults_[i] != 0 ? 1 : 0;
+    }
+    return static_cast<uint8_t>((successful * 100U) / heartbeatResultCount_);
   }
   uint16_t averageHeartbeatMs() const { return averageHeartbeatMs_; }
   int8_t lastRssi() const { return 0; }
@@ -164,6 +169,8 @@ public:
 private:
   static constexpr uint32_t kMagic = 0x53545550UL;
   static constexpr uint8_t kVersion = 1;
+  static constexpr uint8_t kConfigSyncSlotCount = kSoundActionCount + kDoorCount + 1;
+  static constexpr uint16_t kConfigSyncCompleteMask = static_cast<uint16_t>((1U << kConfigSyncSlotCount) - 1U);
 
   static void onReceiveStatic(const uint8_t *mac, const uint8_t *data, int len) {
     if (instance()) {
@@ -214,10 +221,9 @@ private:
       const uint32_t now = millis();
       memcpy(lastDoorStates_, packet.doorStates, sizeof(lastDoorStates_));
       lastStateMessageMs_ = now;
-      if (heartbeatOk_ < 250) {
-        ++heartbeatOk_;
-      }
-      if (packet.sequence == lastHeartbeatSequence_) {
+      if (heartbeatPending_ && packet.sequence == lastHeartbeatSequence_) {
+        heartbeatPending_ = false;
+        recordHeartbeatResult(true);
         const uint32_t elapsed = now - lastHeartbeatSentMs_;
         recordHeartbeatLatency(static_cast<uint16_t>(elapsed > 65535 ? 65535 : elapsed));
       }
@@ -227,6 +233,7 @@ private:
         packet.configKind == static_cast<uint8_t>(ConfigSyncKind::SoundAction) &&
         packet.configIndex < kSoundActionCount) {
       settings_->setSoundAction(packet.configIndex, packet.cabSound, packet.canopySound, packet.repeat != 0, packet.delayMs);
+      configSyncReceivedMask_ |= static_cast<uint16_t>(1U << packet.configIndex);
       return;
     }
     if (type == PacketType::ConfigSync && role_ == DeviceRole::Cab &&
@@ -234,11 +241,13 @@ private:
         packet.configIndex < kDoorCount) {
       settings_->setDoorOverlay(packet.configIndex, packet.overlayName, packet.overlayWidth, packet.overlayHeight,
                                 packet.overlayX, packet.overlayY, packet.overlayClosedColor, packet.overlayOpenColor);
+      configSyncReceivedMask_ |= static_cast<uint16_t>(1U << (kSoundActionCount + packet.configIndex));
       return;
     }
     if (type == PacketType::ConfigSync && role_ == DeviceRole::Cab &&
         packet.configKind == static_cast<uint8_t>(ConfigSyncKind::UteColor)) {
       settings_->setUteColor(packet.uteColor);
+      configSyncReceivedMask_ |= static_cast<uint16_t>(1U << (kSoundActionCount + kDoorCount));
       return;
     }
   }
@@ -298,16 +307,15 @@ private:
     if (!settings_ || !settings_->hasPeer()) {
       return;
     }
+    if (heartbeatPending_) {
+      heartbeatPending_ = false;
+      recordHeartbeatResult(false);
+    }
     ShutupPacket packet{};
     fillPacket(packet, PacketType::HeartbeatRequest);
     lastHeartbeatSequence_ = packet.sequence;
     lastHeartbeatSentMs_ = millis();
-    if (heartbeatSent_ < 250) {
-      ++heartbeatSent_;
-    } else {
-      heartbeatSent_ = static_cast<uint16_t>((heartbeatSent_ / 2U) + 1U);
-      heartbeatOk_ = static_cast<uint16_t>(heartbeatOk_ / 2U);
-    }
+    heartbeatPending_ = true;
     esp_now_send(settings_->peerMac(), reinterpret_cast<uint8_t *>(&packet), sizeof(packet));
   }
 
@@ -382,6 +390,14 @@ private:
     averageHeartbeatMs_ = static_cast<uint16_t>(total / heartbeatLatencyCount_);
   }
 
+  void recordHeartbeatResult(bool successful) {
+    heartbeatResults_[heartbeatResultIndex_] = successful ? 1 : 0;
+    heartbeatResultIndex_ = static_cast<uint8_t>((heartbeatResultIndex_ + 1) % kHeartbeatWindow);
+    if (heartbeatResultCount_ < kHeartbeatWindow) {
+      ++heartbeatResultCount_;
+    }
+  }
+
   static uint8_t doorEnabledMaskFrom(const DoorState states[kDoorCount]) {
     uint8_t mask = 0;
     for (uint8_t i = 0; i < kDoorCount; ++i) {
@@ -414,9 +430,11 @@ private:
   uint32_t lastCabSeenMs_{0};
   uint32_t lastConfigSyncMs_{0};
   uint32_t sequence_{0};
-  uint16_t heartbeatSent_{0};
-  uint16_t heartbeatOk_{0};
   static constexpr uint8_t kHeartbeatWindow = 5;
+  uint8_t heartbeatResults_[kHeartbeatWindow]{};
+  uint8_t heartbeatResultIndex_{0};
+  uint8_t heartbeatResultCount_{0};
+  bool heartbeatPending_{false};
   uint16_t heartbeatLatencies_[kHeartbeatWindow]{};
   uint8_t heartbeatLatencyIndex_{0};
   uint8_t heartbeatLatencyCount_{0};
@@ -424,6 +442,7 @@ private:
   uint32_t lastHeartbeatSequence_{0};
   uint32_t lastHeartbeatSentMs_{0};
   uint8_t nextConfigSyncSlot_{0};
+  uint16_t configSyncReceivedMask_{0};
   DoorState doorStates_[kDoorCount]{};
   DoorState lastDoorStates_[kDoorCount]{};
   String localMac_;

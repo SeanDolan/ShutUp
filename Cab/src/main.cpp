@@ -25,6 +25,7 @@ bool configMode = false;
 bool muted = false;
 bool alarmActive = false;
 bool lastLinkFresh = false;
+bool normalDisplayActive = false;
 uint8_t mutedDoorMask = 0;
 uint32_t allDoorsOkSinceMs = 0;
 shutup::DoorState lastDoorStates[shutup::kDoorCount]{};
@@ -116,6 +117,7 @@ void updateDoorAlarm(uint8_t openMask, uint32_t now) {
 void updateNormalOperation() {
   const uint32_t now = millis();
   const bool linkFresh = espNow.cabStateFresh(now);
+  const bool linkChanged = linkFresh != lastLinkFresh;
   shutup::DoorState doorStates[shutup::kDoorCount]{};
   bool doorStatesChanged = false;
   for (uint8_t i = 0; i < shutup::kDoorCount; ++i) {
@@ -123,6 +125,13 @@ void updateNormalOperation() {
     doorStatesChanged = doorStatesChanged || doorStates[i] != lastDoorStates[i];
   }
 
+  const bool initialSyncReady = linkFresh && espNow.cabConfigSyncComplete();
+  if (!normalDisplayActive && !initialSyncReady) {
+    return;
+  }
+
+  const bool enteringNormalDisplay = !normalDisplayActive;
+  normalDisplayActive = true;
   if (linkFresh && !lastLinkFresh) {
     soundPlayer.trigger(shutup::SoundAction::ConnectivitySuccess);
   } else if (!linkFresh && lastLinkFresh) {
@@ -131,12 +140,12 @@ void updateNormalOperation() {
 
   updateDoorAlarm(openDoorMask(doorStates), now);
 
-  if (now - lastDisplayMs >= 500 || doorStatesChanged || linkFresh != lastLinkFresh) {
+  if (enteringNormalDisplay || now - lastDisplayMs >= 500 || doorStatesChanged || linkChanged) {
     display.showNormal(doorStates, settings, linkFresh, espNow.heartbeatSuccessPercent(), espNow.averageHeartbeatMs(), muted);
     lastDisplayMs = now;
     memcpy(lastDoorStates, doorStates, sizeof(lastDoorStates));
-    lastLinkFresh = linkFresh;
   }
+  lastLinkFresh = linkFresh;
 }
 
 }  // namespace
